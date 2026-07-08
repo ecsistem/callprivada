@@ -9,7 +9,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - callprivada_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fwlc"]
       interval: 5s
@@ -38,7 +38,7 @@ services:
       - "9002:9000"
       - "9003:9001"
     volumes:
-      - minio_data:/data
+      - callprivada_minio_data:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -87,8 +87,8 @@ services:
       - proxy
 
 volumes:
-  postgres_data:
-  minio_data:
+  callprivada_postgres_data:
+  callprivada_minio_data:
 
 networks:
   default:
