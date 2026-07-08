@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scrollbar-gutter: stable;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -73,6 +77,51 @@ html, body {
   outline: none;
 }
 .glass-input-wrap input::placeholder { color: #52525b; }
+
+/* Marquee diagonal ribbons */
+@keyframes marqueeScrollRight {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes marqueeScrollLeft {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+
+/* Nav entry */
+@keyframes navEntry {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.nav-entry {
+  animation: navEntry 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+}
+
+/* Hero stagger */
+@keyframes heroEntry {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-anim {
+  animation: heroEntry 0.75s cubic-bezier(0.22,1,0.36,1) both;
+}
+.hero-anim:nth-child(1) { animation-delay: 0.25s; }
+.hero-anim:nth-child(2) { animation-delay: 0.36s; }
+.hero-anim:nth-child(3) { animation-delay: 0.47s; }
+.hero-anim:nth-child(4) { animation-delay: 0.58s; }
+.hero-anim:nth-child(5) { animation-delay: 0.69s; }
+.hero-anim:nth-child(6) { animation-delay: 0.80s; }
+
+/* Scroll-reveal */
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal-visible {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
 
 /* Garante que o vídeo nunca exiba controles nativos mesmo via shadow DOM */
 video::-webkit-media-controls { display: none !important; }

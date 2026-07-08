@@ -517,6 +517,7 @@ export default function CallPublicPage() {
   );
   const [creditsSeconds, setCreditsSeconds] = useState(0);
   const [creditsGranted, setCreditsGranted] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(true);
   useTrackingScripts(call?.tracking);
 
   // Draggable self-cam
@@ -644,6 +645,7 @@ export default function CallPublicPage() {
     const rate = call.playback_rate > 0 ? call.playback_rate : 1;
     video.playbackRate = rate;
 
+    setVideoLoading(true);
     video.play().then(() => setPlaying(true)).catch(() => {});
 
     const endTime = call.end_time_seconds > 0 ? call.end_time_seconds : Infinity;
@@ -986,6 +988,7 @@ export default function CallPublicPage() {
         disablePictureInPicture
         controlsList="nodownload nofullscreen noremoteplayback"
         onContextMenu={(e) => e.preventDefault()}
+        onCanPlay={() => setVideoLoading(false)}
         style={{
           pointerEvents: 'none',
           objectFit: 'cover',
@@ -995,6 +998,34 @@ export default function CallPublicPage() {
           transition: 'filter 0.3s ease',
         }}
       />
+
+      {/* Loading overlay enquanto o vídeo bufferiza */}
+      {videoLoading && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#0b141a]">
+          <div className="relative flex items-center justify-center mb-6">
+            {/* Anéis pulsantes */}
+            <div className="absolute w-32 h-32 rounded-full border border-[#25d366]/20 animate-ping" style={{ animationDuration: '1.8s' }} />
+            <div className="absolute w-24 h-24 rounded-full border border-[#25d366]/30 animate-ping" style={{ animationDuration: '1.4s', animationDelay: '0.3s' }} />
+            {/* Avatar */}
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#25d366]/40 bg-[#2a3942] flex items-center justify-center shadow-xl">
+              {call?.contact_photo_url ? (
+                <img src={call.contact_photo_url} alt={call?.display_name} className="w-full h-full object-cover" draggable={false} />
+              ) : (
+                <svg viewBox="0 0 24 24" fill="#8696a0" className="w-10 h-10">
+                  <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                </svg>
+              )}
+            </div>
+          </div>
+          <p className="text-white text-lg font-semibold mb-1">{call?.display_name}</p>
+          <p className="text-[#8696a0] text-sm mb-6">Conectando…</p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#25d366] animate-bounce" style={{ animationDelay: '0s' }} />
+            <div className="w-2 h-2 rounded-full bg-[#25d366] animate-bounce" style={{ animationDelay: '0.15s' }} />
+            <div className="w-2 h-2 rounded-full bg-[#25d366] animate-bounce" style={{ animationDelay: '0.3s' }} />
+          </div>
+        </div>
+      )}
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/70 pointer-events-none" />
 

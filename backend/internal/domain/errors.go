@@ -17,4 +17,5 @@ var (
 	ErrForbidden              = errors.New("access denied")
 	ErrPaymentNotConfigured   = errors.New("payment gateway not configured for this account")
 	ErrPlanLimitReached       = errors.New("plan limit reached")
+	ErrPendingApproval        = errors.New("account pending admin approval")
 )

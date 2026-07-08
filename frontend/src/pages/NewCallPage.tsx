@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
-const inputCls = "w-full bg-[#111115] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -140,7 +140,7 @@ function VideoCard({ video, selected, onSelect }: { video: Video; selected: bool
       className={`w-full text-left flex items-center gap-4 p-3 rounded-2xl border transition-all ${
         selected
           ? 'bg-green-500/10 border-green-500/40 shadow-lg shadow-green-900/10'
-          : 'bg-[#111115] border-white/5 hover:border-white/15 hover:bg-white/[0.03]'
+          : 'bg-[#1c0510] border-white/5 hover:border-white/15 hover:bg-white/[0.03]'
       }`}
     >
       {/* Video thumbnail */}

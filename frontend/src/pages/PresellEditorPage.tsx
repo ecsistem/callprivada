@@ -15,7 +15,7 @@ import {
   Palette, Type, Phone, ExternalLink, Plus, Trash2,
 } from 'lucide-react';
 
-const inputCls = "w-full bg-[#111115] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -268,9 +268,9 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b]">
+    <div className="min-h-screen bg-[#120208]">
       {/* Top bar */}
-      <div className="sticky top-0 z-20 bg-[#09090b]/90 backdrop-blur border-b border-white/5 px-6 py-4 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-[#120208]/90 backdrop-blur border-b border-white/5 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link to={backPath} className="text-gray-500 hover:text-white transition-colors">
             <ArrowLeft size={18} />
@@ -630,7 +630,7 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
                   {config.show_comments && (
                     <div className="space-y-2">
                       {(config.comments ?? []).map((c, i) => (
-                        <div key={i} className="bg-[#111115] border border-white/5 rounded-xl p-3 space-y-2">
+                        <div key={i} className="bg-[#1c0510] border border-white/5 rounded-xl p-3 space-y-2">
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <label className="text-[10px] text-gray-500">Nome</label>

@@ -287,7 +287,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
+      <div className="min-h-screen bg-[#120208] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
@@ -295,7 +295,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
 
   if (error || !config) {
     return (
-      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center gap-4 text-center px-6">
+      <div className="min-h-screen bg-[#120208] flex flex-col items-center justify-center gap-4 text-center px-6">
         <p className="text-white text-xl font-bold">Página não encontrada</p>
         <p className="text-gray-500 text-sm">Este link não existe ou foi removido.</p>
       </div>

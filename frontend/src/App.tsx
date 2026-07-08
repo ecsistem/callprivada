@@ -23,6 +23,7 @@ import AdminPage from './pages/AdminPage';
 import PresellsPage from './pages/PresellsPage';
 import PresellEditorPage from './pages/PresellEditorPage';
 import PresellPublicPage from './pages/PresellPublicPage';
+import PendingApprovalPage from './pages/PendingApprovalPage';
 import DownsellsPage from './pages/DownsellsPage';
 import DownsellEditorPage from './pages/DownsellEditorPage';
 import DownsellPublicPage from './pages/DownsellPublicPage';
@@ -49,6 +50,7 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/pending" element={<PendingApprovalPage />} />
       <Route path="/c/:slug" element={<CallPublicPage />} />
       <Route path="/p/:slug" element={<PresellPublicPage />} />
       <Route path="/d/:slug" element={<DownsellPublicPage />} />

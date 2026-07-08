@@ -69,9 +69,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Logo */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-white/5">
         <Link to="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-900/40">
-            <Phone size={15} className="text-white" />
-          </div>
+          <img src="/logo.png" alt="CallPrivada" className="w-8 h-8 object-contain" />
           <span className="text-white font-bold text-base tracking-tight">CallPrivada</span>
         </Link>
         {onClose && (
@@ -120,9 +118,9 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white flex">
+    <div className="min-h-screen bg-[#120208] text-white flex">
       {/* Sidebar desktop */}
-      <aside className="hidden lg:flex flex-col w-56 shrink-0 bg-[#111115] border-r border-white/5 fixed inset-y-0 left-0 z-30">
+      <aside className="hidden lg:flex flex-col w-56 shrink-0 bg-[#1c0510] border-r border-white/5 fixed inset-y-0 left-0 z-30">
         <Sidebar />
       </aside>
 
@@ -130,7 +128,7 @@ export default function AppLayout() {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="relative flex flex-col w-56 bg-[#111115] border-r border-white/5 h-full z-10">
+          <aside className="relative flex flex-col w-56 bg-[#1c0510] border-r border-white/5 h-full z-10">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </aside>
         </div>
@@ -139,14 +137,12 @@ export default function AppLayout() {
       {/* Main */}
       <div className="flex-1 lg:ml-56 flex flex-col min-h-screen">
         {/* Mobile topbar */}
-        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#111115] border-b border-white/5 sticky top-0 z-20">
+        <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#1c0510] border-b border-white/5 sticky top-0 z-20">
           <button onClick={() => setMobileOpen(true)} className="text-gray-400 hover:text-white p-1">
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-              <Phone size={12} className="text-white" />
-            </div>
+            <img src="/logo.png" alt="CallPrivada" className="w-6 h-6 object-contain" />
             <span className="text-white font-bold text-sm">CallPrivada</span>
           </div>
           <div className="w-8" />

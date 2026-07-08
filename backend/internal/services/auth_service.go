@@ -69,12 +69,13 @@ func (s *AuthService) Register(ctx context.Context, name, email, password string
 		Email:        email,
 		PasswordHash: hash,
 		Role:         domain.RoleUser,
+		IsBlocked:    true, // pending admin approval
 	}
 	if err := s.users.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
-	return s.issueTokens(ctx, user, meta)
+	return nil, domain.ErrPendingApproval
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string, meta RequestMeta) (*AuthResult, error) {

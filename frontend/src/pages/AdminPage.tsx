@@ -14,7 +14,7 @@ import {
 
 type Tab = 'stats' | 'users' | 'subscriptions' | 'calls' | 'logs' | 'plans';
 
-const inputCls = "bg-[#111115] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "bg-[#1c0510] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
 
 function Stat({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | undefined; color: string }) {
   return (
@@ -319,7 +319,7 @@ function UsersTab() {
       </div>
 
       {showCreate && (
-        <div className="border border-white/10 bg-[#111115] rounded-xl p-4 space-y-3">
+        <div className="border border-white/10 bg-[#1c0510] rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-white">Criar usuário</p>
             <button onClick={() => setShowCreate(false)}><X size={15} className="text-gray-500" /></button>

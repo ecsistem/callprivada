@@ -346,7 +346,7 @@ export default function TimelineEditorPage() {
   const inputCls = 'w-full bg-[#0f0f0f] border border-white/8 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors placeholder:text-gray-600';
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white">
+    <div className="min-h-screen bg-[#120208] text-white">
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
         {/* Header */}
@@ -685,7 +685,7 @@ export default function TimelineEditorPage() {
                           <span className="text-[10px] font-mono text-gray-600">{toMMSS(ev.trigger_at_seconds)}</span>
                         </div>
                         {/* Dot */}
-                        <div className={`w-3 h-3 mt-3.5 rounded-full shrink-0 z-10 border-2 transition-colors ${isSelected ? meta.color.replace('text-', 'border-') + ' ' + meta.bg : 'border-gray-700 bg-[#09090b]'}`} />
+                        <div className={`w-3 h-3 mt-3.5 rounded-full shrink-0 z-10 border-2 transition-colors ${isSelected ? meta.color.replace('text-', 'border-') + ' ' + meta.bg : 'border-gray-700 bg-[#120208]'}`} />
                         {/* Card */}
                         <div className={`flex-1 rounded-2xl px-4 py-3 border transition-all ${isSelected ? `${meta.bg} ${meta.border}` : 'bg-[#111] border-white/5 hover:border-white/10'}`}>
                           <div className="flex items-start justify-between gap-2">

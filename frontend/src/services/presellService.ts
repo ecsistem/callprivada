@@ -172,7 +172,7 @@ export const TEMPLATES: { slug: string; label: string; description: string; defa
     label: '⚡ Direto',
     description: 'Mínimo de texto + countdown — máxima conversão para tráfego quente que já sabe o que quer',
     defaults: {
-      bg_color: '#09090b',
+      bg_color: '#120208',
       text_color: '#ffffff',
       badge: '+18',
       headline: 'Clica e vê o que está te esperando',

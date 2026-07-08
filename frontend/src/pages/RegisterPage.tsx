@@ -1,28 +1,10 @@
-import { Eye, EyeOff, Mail, Lock, User, Video, Shield, Zap } from 'lucide-react';
-
+import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { register } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 
-const FEATURES = [
-  { icon: Video,  title: 'Videochamadas privadas',  desc: 'Conecte-se com total privacidade.' },
-  { icon: Shield, title: 'Seguro e protegido',       desc: 'Seus dados e conversas sempre protegidos.' },
-  { icon: Zap,    title: 'Rápido e simples',         desc: 'Crie sua conta e comece em segundos.' },
-];
 
-function BrandLogo({ size = 56 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 56 56" fill="none">
-      <path d="M16 14 C16 8 20 5 24 8" stroke="#f0186a" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-      <path d="M40 14 C40 8 36 5 32 8" stroke="#f0186a" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-      <rect x="6" y="16" width="32" height="24" rx="6" stroke="#f0186a" strokeWidth="2.5" fill="none"/>
-      <circle cx="22" cy="28" r="7" stroke="#f0186a" strokeWidth="2" fill="none"/>
-      <circle cx="22" cy="28" r="3" fill="#f0186a" opacity="0.4"/>
-      <path d="M40 21 L50 25 L50 31 L40 35 Z" stroke="#f0186a" strokeWidth="2.5" strokeLinejoin="round" fill="none"/>
-    </svg>
-  );
-}
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -40,11 +22,19 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const data = await register({ name, email, password });
-      setAuth(data.user, data.access_token, data.refresh_token);
+      if ((data as { status?: string })?.status === 'pending_approval') {
+        navigate('/pending');
+        return;
+      }
+      setAuth((data as typeof data).user, (data as typeof data).access_token, (data as typeof data).refresh_token);
       navigate('/dashboard');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
-        ?.response?.data?.error?.message;
+      const resp = err as { response?: { status?: number; data?: { status?: string; error?: { message?: string } } } };
+      if (resp?.response?.status === 202 || resp?.response?.data?.status === 'pending_approval') {
+        navigate('/pending');
+        return;
+      }
+      const msg = resp?.response?.data?.error?.message;
       setError(msg ?? 'Erro ao criar conta.');
     } finally {
       setLoading(false);
@@ -52,71 +42,31 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#080808]">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#120208]">
 
-      {/* ══ LEFT: branding ══════════════════════════════════════════ */}
-      <div className="hidden md:flex flex-col justify-between relative overflow-hidden md:w-[55%] p-10">
-
-        {/* Hero image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/brand-hero.jpg')" }}
+      {/* ══ LEFT: imagem pura ═══════════════════════════════════════ */}
+      <div className="hidden md:block relative overflow-hidden md:w-[55%]">
+        <img
+          src="/brand-hero.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 to-transparent" />
-
-        <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-pink-600/30 blur-2xl" />
-        <div className="absolute bottom-16 right-8 w-24 h-24 rounded-full bg-pink-600/20 blur-2xl" />
-
-        {/* Logo */}
-        <div className="relative z-10">
-          <BrandLogo size={64} />
-          <h2 className="text-5xl font-black text-white mt-4 leading-none">Call</h2>
-          <h2 className="text-5xl font-black text-[#f0186a] leading-none">Privada</h2>
-          <div className="mt-3 space-y-0.5">
-            <p className="text-gray-400 text-xs tracking-[0.2em] uppercase">Suas chamadas.</p>
-            <p className="text-[#f0186a] text-xs tracking-[0.2em] uppercase font-semibold">Suas regras.</p>
-          </div>
-        </div>
-
-        {/* Features */}
-        <div className="relative z-10 space-y-5">
-          {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-black/50 border border-[#f0186a]/30 flex items-center justify-center shrink-0 backdrop-blur-sm">
-                <Icon size={20} className="text-[#f0186a]" />
-              </div>
-              <div>
-                <p className="text-white font-bold text-xs tracking-wider uppercase">{title}</p>
-                <p className="text-gray-400 text-xs mt-1 leading-relaxed">{desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Bottom badge */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full border border-[#f0186a]/40 flex items-center justify-center">
-            <Lock size={12} className="text-[#f0186a]" />
-          </div>
-          <div>
-            <p className="text-white text-[10px] tracking-widest uppercase">Privado. Seguro.</p>
-            <p className="text-[10px] tracking-widest uppercase">
-              <span className="text-[#f0186a] font-bold">100%</span>
-              <span className="text-gray-400"> Seu.</span>
-            </p>
-          </div>
-        </div>
+        {/* overlay escuro geral */}
+        <div className="absolute inset-0 bg-black/30" />
+        {/* degradê lateral → mescla com o fundo do form */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#0e0107]/40 to-[#0e0107]" />
+        {/* degradê vertical suave */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#120208]/60 via-transparent to-[#120208]/60" />
       </div>
 
       {/* ══ RIGHT: form ═════════════════════════════════════════════ */}
-      <div className="flex-1 flex items-center justify-center px-8 py-14 bg-[#0e0e12]">
+      <div className="flex-1 flex items-center justify-center px-8 py-14 bg-[#0e0107]">
         <div className="w-full max-w-[380px]">
 
           {/* Mobile logo */}
           <div className="md:hidden flex items-center gap-3 mb-8">
-            <BrandLogo size={36} />
-            <p className="text-xl font-bold text-white">Call <span className="text-[#f0186a]">Privada</span></p>
+            <img src="/logo.png" alt="CallPrivada" className="w-9 h-9 object-contain" />
+            <p className="text-xl font-bold text-white">Call <span className="text-[#FE015C]">Privada</span></p>
           </div>
 
           {/* Heading */}
@@ -124,7 +74,7 @@ export default function RegisterPage() {
             <h1 className="text-3xl font-bold text-white">Criar conta</h1>
             <p className="text-gray-400 text-sm mt-1.5">
               Comece agora,{' '}
-              <span className="text-[#f0186a] font-medium">é grátis</span>
+              <span className="text-[#FE015C] font-medium">é grátis</span>
             </p>
           </div>
 
@@ -133,7 +83,7 @@ export default function RegisterPage() {
             <Link to="/login" className="pb-3 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors">
               Login
             </Link>
-            <button className="pb-3 text-sm font-semibold text-[#f0186a] border-b-2 border-[#f0186a] -mb-px">
+            <button className="pb-3 text-sm font-semibold text-[#FE015C] border-b-2 border-[#FE015C] -mb-px">
               Criar conta
             </button>
           </div>
@@ -150,7 +100,7 @@ export default function RegisterPage() {
             {/* Nome */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">Nome</label>
-              <div className="flex items-center gap-3 bg-[#17171e] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#f0186a]/50 focus-within:bg-[#1c0f18] transition-all">
+              <div className="flex items-center gap-3 bg-[#1c0510] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#FE015C]/50 focus-within:bg-[#280818] transition-all">
                 <User size={16} className="text-gray-600 shrink-0" />
                 <input
                   type="text"
@@ -167,7 +117,7 @@ export default function RegisterPage() {
             {/* Email */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">E-mail</label>
-              <div className="flex items-center gap-3 bg-[#17171e] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#f0186a]/50 focus-within:bg-[#1c0f18] transition-all">
+              <div className="flex items-center gap-3 bg-[#1c0510] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#FE015C]/50 focus-within:bg-[#280818] transition-all">
                 <Mail size={16} className="text-gray-600 shrink-0" />
                 <input
                   type="email"
@@ -184,7 +134,7 @@ export default function RegisterPage() {
             {/* Senha */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-300">Senha</label>
-              <div className="flex items-center gap-3 bg-[#17171e] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#f0186a]/50 focus-within:bg-[#1c0f18] transition-all">
+              <div className="flex items-center gap-3 bg-[#1c0510] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#FE015C]/50 focus-within:bg-[#280818] transition-all">
                 <Lock size={16} className="text-gray-600 shrink-0" />
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -204,7 +154,7 @@ export default function RegisterPage() {
               {password.length > 0 && (
                 <div className="flex gap-1 pt-1">
                   {[password.length >= 8, /[A-Z]/.test(password), /[0-9!@#$]/.test(password)].map((ok, i) => (
-                    <div key={i} className={`flex-1 h-1 rounded-full transition-colors ${ok ? 'bg-[#f0186a]' : 'bg-white/10'}`} />
+                    <div key={i} className={`flex-1 h-1 rounded-full transition-colors ${ok ? 'bg-[#FE015C]' : 'bg-white/10'}`} />
                   ))}
                 </div>
               )}
@@ -214,7 +164,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-2xl bg-[#f0186a] hover:bg-[#d4135c] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-sm transition-all shadow-lg shadow-pink-900/40 mt-2"
+              className="w-full rounded-2xl bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-sm transition-all shadow-lg shadow-pink-900/40 mt-2"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -227,7 +177,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-gray-600 mt-6">
             Já tem uma conta?{' '}
-            <Link to="/login" className="text-[#f0186a] hover:underline font-medium transition-colors">
+            <Link to="/login" className="text-[#FE015C] hover:underline font-medium transition-colors">
               Entrar
             </Link>
           </p>

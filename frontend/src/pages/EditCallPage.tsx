@@ -13,7 +13,7 @@ import { listEvents } from '../services/eventService';
 import { listPresells, listUpsells, listDownsells, getPresellsByCallId } from '../services/presellService';
 import { listVideos, type Video } from '../services/videoService';
 
-const inputCls = "w-full bg-[#111115] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -317,7 +317,7 @@ export default function EditCallPage() {
       {/* Public link */}
       <div className="bg-[#18181b] border border-white/5 rounded-2xl p-4">
         <p className="text-xs text-gray-500 mb-2.5 font-medium uppercase tracking-wider">Link público</p>
-        <div className="flex items-center gap-2 bg-[#111115] border border-white/5 rounded-xl px-3 py-2">
+        <div className="flex items-center gap-2 bg-[#1c0510] border border-white/5 rounded-xl px-3 py-2">
           <code className="text-green-400 text-xs flex-1 truncate">{publicLink}</code>
           <button
             onClick={() => { navigator.clipboard.writeText(publicLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
@@ -411,7 +411,7 @@ export default function EditCallPage() {
           <button
             type="button"
             onClick={() => setShowVideoPicker(v => !v)}
-            className="w-full flex items-center gap-3 bg-[#111115] border border-white/10 rounded-xl px-4 py-3 text-left hover:border-purple-500/40 transition-colors group"
+            className="w-full flex items-center gap-3 bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-left hover:border-purple-500/40 transition-colors group"
           >
             <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
               <Film size={14} className="text-purple-400" />
@@ -442,7 +442,7 @@ export default function EditCallPage() {
                     key={v.id}
                     type="button"
                     onClick={() => { setVideoId(v.id); setShowVideoPicker(false); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${v.id === videoId ? 'bg-purple-500/15 text-white' : 'bg-[#111115] text-gray-300 hover:bg-white/5'}`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${v.id === videoId ? 'bg-purple-500/15 text-white' : 'bg-[#1c0510] text-gray-300 hover:bg-white/5'}`}
                   >
                     <Film size={13} className={v.id === videoId ? 'text-purple-400' : 'text-gray-600'} />
                     <div className="flex-1 min-w-0">
@@ -501,7 +501,7 @@ export default function EditCallPage() {
             <Toggle value={billingMode === 'credits'} onChange={v => setBillingMode(v ? 'credits' : 'none')} />
           </div>
           {billingMode === 'credits' && (
-            <div className="bg-[#111115] border border-white/5 rounded-xl p-3 space-y-1.5 text-xs text-gray-400">
+            <div className="bg-[#1c0510] border border-white/5 rounded-xl p-3 space-y-1.5 text-xs text-gray-400">
               <p className="font-semibold text-gray-300">Pacotes disponíveis para o lead:</p>
               {[
                 { label: '5 minutos', price: 'R$ 10,00' },
@@ -607,7 +607,7 @@ export default function EditCallPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-400">Selecionar upsell</label>
               {upsells.length === 0 ? (
-                <div className="flex items-center justify-between bg-[#111115] border border-white/5 rounded-xl px-4 py-3">
+                <div className="flex items-center justify-between bg-[#1c0510] border border-white/5 rounded-xl px-4 py-3">
                   <p className="text-xs text-gray-500">Nenhum upsell criado ainda.</p>
                   <Link to="/upsell/new" className="text-xs text-purple-400 hover:text-purple-300 font-medium">+ Criar →</Link>
                 </div>
@@ -639,7 +639,7 @@ export default function EditCallPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-400">Selecionar downsell</label>
               {downsells.length === 0 ? (
-                <div className="flex items-center justify-between bg-[#111115] border border-white/5 rounded-xl px-4 py-3">
+                <div className="flex items-center justify-between bg-[#1c0510] border border-white/5 rounded-xl px-4 py-3">
                   <p className="text-xs text-gray-500">Nenhum downsell criado ainda.</p>
                   <Link to="/downsell/new" className="text-xs text-yellow-400 hover:text-yellow-300 font-medium">+ Criar →</Link>
                 </div>
@@ -671,7 +671,7 @@ export default function EditCallPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-gray-400">Selecionar presell</label>
               {presells.length === 0 ? (
-                <div className="flex items-center justify-between bg-[#111115] border border-white/5 rounded-xl px-4 py-3">
+                <div className="flex items-center justify-between bg-[#1c0510] border border-white/5 rounded-xl px-4 py-3">
                   <p className="text-xs text-gray-500">Nenhum presell criado ainda.</p>
                   <Link to="/presell/new" className="text-xs text-blue-400 hover:text-blue-300 font-medium">+ Criar →</Link>
                 </div>

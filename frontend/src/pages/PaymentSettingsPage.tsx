@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getPaymentConfig, savePaymentConfig, type PaymentConfig } from '../services/paymentConfigService';
 import { Zap, Check, AlertCircle, Eye, EyeOff, ExternalLink } from 'lucide-react';
 
-const inputCls = "w-full bg-[#111115] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all font-mono";
+const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all font-mono";
 
 export default function PaymentSettingsPage() {
   const qc = useQueryClient();
@@ -170,7 +170,7 @@ export default function PaymentSettingsPage() {
       <div className="bg-[#18181b] border border-white/5 rounded-2xl p-5 space-y-3">
         <p className="text-xs text-gray-500 uppercase tracking-wider font-medium">URL do Webhook</p>
         <p className="text-xs text-gray-500">Configure no painel ZuckPay para receber confirmações de pagamento:</p>
-        <div className="flex items-center gap-2 bg-[#111115] border border-white/5 rounded-xl px-3 py-2.5">
+        <div className="flex items-center gap-2 bg-[#1c0510] border border-white/5 rounded-xl px-3 py-2.5">
           <code className="text-green-400 text-xs flex-1 break-all">{webhookUrl}</code>
           <button
             onClick={() => navigator.clipboard.writeText(webhookUrl)}

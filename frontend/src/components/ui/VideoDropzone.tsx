@@ -73,7 +73,7 @@ export function VideoDropzone({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`flex flex-col items-center justify-center gap-3 h-44 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
-            isDragging ? 'border-green-500/60 bg-green-500/5' : 'border-white/10 bg-[#111115] hover:border-white/20 hover:bg-white/[0.02]'
+            isDragging ? 'border-green-500/60 bg-green-500/5' : 'border-white/10 bg-[#1c0510] hover:border-white/20 hover:bg-white/[0.02]'
           }`}
         >
           <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
