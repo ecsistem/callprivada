@@ -1,112 +1,41 @@
-import { Eye, EyeOff, Phone, Star } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Video, Shield, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../services/authService';
 import { useAuthStore } from '../stores/authStore';
 
-const TESTIMONIALS = [
-  {
-    name: 'Ana Paula',
-    handle: '@anapaula_vendas',
-    text: 'Fiz R$3.200 na primeira semana usando o callPrivada. É surreal como funciona!',
-    emoji: '💰',
-  },
-  {
-    name: 'Carlos M.',
-    handle: '@carlosm_digital',
-    text: 'Taxa de conversão disparou 4x depois que comecei a usar.',
-    emoji: '🚀',
-  },
+const FEATURES = [
+  { icon: Video,  title: 'Videochamadas privadas',  desc: 'Conecte-se com total privacidade.' },
+  { icon: Shield, title: 'Seguro e protegido',       desc: 'Seus dados e conversas sempre protegidos.' },
+  { icon: Zap,    title: 'Rápido e simples',         desc: 'Crie sua conta e comece em segundos.' },
 ];
 
-function PhoneMockup() {
+/* ─── Logo SVG (câmera + chifres) ─────────────────────────────────── */
+function BrandLogo({ size = 56 }: { size?: number }) {
   return (
-    <div className="auth-float relative w-[200px] mx-auto">
-      {/* Glow */}
-      <div className="absolute inset-0 rounded-[36px] blur-3xl bg-pink-500/25 scale-110" />
-      {/* Phone frame */}
-      <div className="relative rounded-[36px] bg-[#111114] border border-white/10 shadow-2xl overflow-hidden" style={{ aspectRatio: '9/19.5' }}>
-        {/* Status bar */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-1">
-          <span className="text-white text-[10px] font-semibold">9:41</span>
-          <div className="flex gap-1 items-center">
-            <div className="w-3 h-1.5 rounded-sm bg-white/60" />
-            <div className="w-0.5 h-1.5 rounded-sm bg-white/30" />
-          </div>
-        </div>
-        {/* WhatsApp call screen */}
-        <div className="flex flex-col items-center px-4 pt-4 pb-6 gap-3 h-full bg-gradient-to-b from-[#0d1117] to-[#1a0a0f]">
-          <p className="text-gray-400 text-[10px]">Ligação de vídeo</p>
-          {/* Avatar */}
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-pink-400 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-900/50">
-              <span className="text-2xl">👩</span>
-            </div>
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-[#0d1117]" />
-          </div>
-          <div className="text-center">
-            <p className="text-white text-sm font-semibold">Fernanda</p>
-            <p className="text-green-400 text-[10px] mt-0.5 flex items-center gap-1 justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
-              Chamando…
-            </p>
-          </div>
-          {/* Video area */}
-          <div className="w-full flex-1 rounded-2xl bg-gradient-to-br from-pink-900/30 to-rose-900/20 border border-pink-500/10 flex items-center justify-center min-h-[80px]">
-            <div className="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center">
-              <Phone size={14} className="text-pink-400" />
-            </div>
-          </div>
-          {/* Controls */}
-          <div className="flex items-center justify-center gap-6 w-full pt-1">
-            <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="white" strokeWidth="1.8">
-                <path d="M9 9a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/>
-                <path d="M6.168 18.849A4 4 0 0 1 10 16h4a4 4 0 0 1 3.834 2.855"/>
-              </svg>
-            </div>
-            <div className="w-11 h-11 rounded-full bg-red-500 flex items-center justify-center shadow-lg shadow-red-900/50">
-              <Phone size={16} className="text-white rotate-[135deg]" />
-            </div>
-            <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="white" strokeWidth="1.8">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TestimonialCard({ t, delay }: { t: typeof TESTIMONIALS[0]; delay: string }) {
-  return (
-    <div className={`auth-el ${delay} flex items-start gap-3 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 p-4 w-full`}>
-      <div className="w-9 h-9 rounded-xl bg-pink-500/20 flex items-center justify-center shrink-0 text-lg">{t.emoji}</div>
-      <div className="min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <p className="text-white text-xs font-semibold truncate">{t.name}</p>
-          <span className="text-gray-600 text-[10px] truncate">{t.handle}</span>
-        </div>
-        <div className="flex gap-0.5 mb-1">
-          {[0,1,2,3,4].map(i => <Star key={i} size={9} className="text-pink-400 fill-pink-400" />)}
-        </div>
-        <p className="text-gray-300 text-[11px] leading-relaxed">{t.text}</p>
-      </div>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 56 56" fill="none">
+      {/* Chifres */}
+      <path d="M16 14 C16 8 20 5 24 8" stroke="#f0186a" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      <path d="M40 14 C40 8 36 5 32 8" stroke="#f0186a" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+      {/* Corpo da câmera */}
+      <rect x="6" y="16" width="32" height="24" rx="6" stroke="#f0186a" strokeWidth="2.5" fill="none"/>
+      {/* Lente */}
+      <circle cx="22" cy="28" r="7" stroke="#f0186a" strokeWidth="2" fill="none"/>
+      <circle cx="22" cy="28" r="3" fill="#f0186a" opacity="0.4"/>
+      {/* Triângulo de vídeo */}
+      <path d="M40 21 L50 25 L50 31 L40 35 Z" stroke="#f0186a" strokeWidth="2.5" strokeLinejoin="round" fill="none"/>
+    </svg>
   );
 }
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [showPw, setShowPw]     = useState(false);
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -126,40 +55,109 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] flex flex-col md:flex-row">
+    <div className="min-h-screen flex flex-col md:flex-row bg-[#080808]">
 
-      {/* ── Left: form ── */}
-      <section className="flex-1 flex items-center justify-center px-8 py-12 order-2 md:order-1">
-        <div className="w-full max-w-sm">
+      {/* ══ LEFT: branding ══════════════════════════════════════════ */}
+      <div className="hidden md:flex flex-col justify-between relative overflow-hidden md:w-[55%] p-10">
+
+        {/* Hero image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/brand-hero.jpg')" }}
+        />
+        {/* Overlay: escurece a direita (onde está a mulher) para o texto à esq. ficar legível */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-black/20" />
+        {/* Overlay extra no rodapé */}
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black/80 to-transparent" />
+
+        {/* Glow circles (decorativos, sobre a foto) */}
+        <div className="absolute top-4 left-4 w-20 h-20 rounded-full bg-pink-600/30 blur-2xl" />
+        <div className="absolute bottom-16 right-8 w-24 h-24 rounded-full bg-pink-600/20 blur-2xl" />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <BrandLogo size={64} />
+          <h2 className="text-5xl font-black text-white mt-4 leading-none">Call</h2>
+          <h2 className="text-5xl font-black text-[#f0186a] leading-none">Privada</h2>
+          <div className="mt-3 space-y-0.5">
+            <p className="text-gray-400 text-xs tracking-[0.2em] uppercase">Suas chamadas.</p>
+            <p className="text-[#f0186a] text-xs tracking-[0.2em] uppercase font-semibold">Suas regras.</p>
+          </div>
+        </div>
+
+        {/* Feature list */}
+        <div className="relative z-10 space-y-5">
+          {FEATURES.map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-black/50 border border-[#f0186a]/30 flex items-center justify-center shrink-0 backdrop-blur-sm">
+                <Icon size={20} className="text-[#f0186a]" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-xs tracking-wider uppercase">{title}</p>
+                <p className="text-gray-400 text-xs mt-1 leading-relaxed">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom badge */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full border border-[#f0186a]/40 flex items-center justify-center">
+            <Lock size={12} className="text-[#f0186a]" />
+          </div>
+          <div>
+            <p className="text-white text-[10px] tracking-widest uppercase">Privado. Seguro.</p>
+            <p className="text-[10px] tracking-widest uppercase">
+              <span className="text-[#f0186a] font-bold">100%</span>
+              <span className="text-gray-400"> Seu.</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ══ RIGHT: form ═════════════════════════════════════════════ */}
+      <div className="flex-1 flex items-center justify-center px-8 py-14 bg-[#0e0e12]">
+        <div className="w-full max-w-[380px]">
 
           {/* Mobile logo */}
-          <div className="auth-el auth-d1 md:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-900/40">
-              <Phone size={14} className="text-white" />
-            </div>
-            <span className="text-white font-bold text-base">CallPrivada</span>
+          <div className="md:hidden flex items-center gap-3 mb-8">
+            <BrandLogo size={36} />
+            <p className="text-xl font-bold text-white">Call <span className="text-[#f0186a]">Privada</span></p>
           </div>
 
           {/* Heading */}
-          <div className="auth-el auth-d1 mb-7">
-            <h1 className="text-4xl font-semibold text-white tracking-tight leading-tight">
-              Bem-vindo<br />
-              <span className="font-light text-gray-400">de volta</span>
-            </h1>
-            <p className="text-gray-500 text-sm mt-2">Acesse sua conta e continue monetizando</p>
+          <div className="mb-7">
+            <h1 className="text-3xl font-bold text-white">Bem-vindo(a)</h1>
+            <p className="text-gray-400 text-sm mt-1.5">
+              Entre na sua conta para{' '}
+              <span className="text-[#f0186a] font-medium">continuar</span>
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="auth-el auth-d1 flex items-start gap-2.5 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
-                <span className="mt-0.5 shrink-0">⚠</span>
-                <span>{error}</span>
-              </div>
-            )}
+          {/* Tabs */}
+          <div className="flex gap-6 mb-7 border-b border-white/8">
+            <button className="pb-3 text-sm font-semibold text-[#f0186a] border-b-2 border-[#f0186a] -mb-px">
+              Login
+            </button>
+            <Link to="/register" className="pb-3 text-sm font-medium text-gray-500 hover:text-gray-300 transition-colors">
+              Criar conta
+            </Link>
+          </div>
 
-            <div className="auth-el auth-d2 space-y-1.5">
-              <label className="text-sm font-medium text-gray-400">Email</label>
-              <div className="glass-input-wrap">
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-2.5 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3 mb-5">
+              <span className="mt-0.5 shrink-0">⚠</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-300">E-mail</label>
+              <div className="flex items-center gap-3 bg-[#17171e] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#f0186a]/50 focus-within:bg-[#1c0f18] transition-all">
+                <Mail size={16} className="text-gray-600 shrink-0" />
                 <input
                   type="email"
                   required
@@ -167,13 +165,16 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
+                  className="flex-1 bg-transparent text-white text-sm placeholder-gray-600 outline-none"
                 />
               </div>
             </div>
 
-            <div className="auth-el auth-d3 space-y-1.5">
-              <label className="text-sm font-medium text-gray-400">Senha</label>
-              <div className="glass-input-wrap relative">
+            {/* Password */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-gray-300">Senha</label>
+              <div className="flex items-center gap-3 bg-[#17171e] border border-white/8 rounded-2xl px-4 py-3.5 focus-within:border-[#f0186a]/50 focus-within:bg-[#1c0f18] transition-all">
+                <Lock size={16} className="text-gray-600 shrink-0" />
                 <input
                   type={showPw ? 'text' : 'password'}
                   required
@@ -181,37 +182,27 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  style={{ paddingRight: '48px' }}
+                  className="flex-1 bg-transparent text-white text-sm placeholder-gray-600 outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(v => !v)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                >
+                <button type="button" onClick={() => setShowPw(v => !v)}
+                  className="text-gray-500 hover:text-gray-300 transition-colors shrink-0">
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {/* Remember + forgot */}
-            <div className="auth-el auth-d4 flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <span className="relative flex items-center">
-                  <input type="checkbox" className="peer sr-only" />
-                  <span className="w-4 h-4 rounded-md border border-white/20 bg-white/5 peer-checked:bg-pink-500 peer-checked:border-pink-500 transition-colors flex items-center justify-center">
-                  </span>
-                </span>
-                <span className="text-gray-400">Manter conectado</span>
-              </label>
-              <span className="text-pink-400 hover:text-pink-300 cursor-pointer transition-colors text-xs font-medium">
-                Esqueci a senha
+            {/* Forgot password */}
+            <div className="flex justify-end">
+              <span className="text-[#f0186a] text-xs hover:underline cursor-pointer transition-colors">
+                Esqueceu sua senha?
               </span>
             </div>
 
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="auth-el auth-d5 w-full rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3.5 text-sm transition-all shadow-lg shadow-pink-900/40"
+              className="w-full rounded-2xl bg-[#f0186a] hover:bg-[#d4135c] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-4 text-sm transition-all shadow-lg shadow-pink-900/40"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -222,55 +213,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="auth-el auth-d6 text-center text-sm text-gray-600 mt-6">
-            Não tem conta?{' '}
-            <Link to="/register" className="text-pink-400 hover:text-pink-300 font-medium transition-colors">
-              Criar conta grátis
+          <p className="text-center text-sm text-gray-600 mt-6">
+            Ainda não tem uma conta?{' '}
+            <Link to="/register" className="text-[#f0186a] hover:underline font-medium transition-colors">
+              Criar conta
             </Link>
           </p>
         </div>
-      </section>
-
-      {/* ── Right: branding panel ── */}
-      <section className="auth-panel hidden md:flex flex-col justify-between w-[440px] shrink-0 relative overflow-hidden order-1 md:order-2 p-8">
-        {/* Background */}
-        <div className="absolute inset-0 bg-[#0f0508]" />
-        <div className="absolute inset-0 bg-gradient-to-br from-pink-950/60 via-transparent to-rose-950/40" />
-        {/* Glow blobs */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full bg-pink-600/15 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/3 right-0 w-48 h-48 rounded-full bg-rose-600/10 blur-3xl pointer-events-none" />
-        {/* Grid lines */}
-        <div className="absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.3) 1px, transparent 1px)', backgroundSize: '40px 40px' }}
-        />
-
-        {/* Logo */}
-        <div className="relative flex items-center gap-3 z-10">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-900/50">
-            <Phone size={16} className="text-white" />
-          </div>
-          <span className="text-white font-bold text-lg">CallPrivada</span>
-        </div>
-
-        {/* Center: phone mockup */}
-        <div className="relative z-10 py-6">
-          <PhoneMockup />
-          <div className="text-center mt-6">
-            <p className="text-white font-semibold text-lg leading-snug">
-              Chame. Convença.<br />
-              <span className="text-pink-400">Converta.</span>
-            </p>
-            <p className="text-gray-500 text-sm mt-2">Chamadas para quem vendem de verdade.</p>
-          </div>
-        </div>
-
-        {/* Bottom: testimonials */}
-        <div className="relative z-10 space-y-3">
-          {TESTIMONIALS.map((t, i) => (
-            <TestimonialCard key={t.handle} t={t} delay={`auth-d${i + 5}`} />
-          ))}
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
