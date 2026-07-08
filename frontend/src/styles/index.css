@@ -16,6 +16,64 @@ html, body {
   animation: slideInTop 0.3s ease-out;
 }
 
+/* Auth page animations */
+@keyframes authFade {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.auth-el {
+  opacity: 0;
+  animation: authFade 0.55s cubic-bezier(.22,1,.36,1) both;
+}
+.auth-d1 { animation-delay: 0.08s; }
+.auth-d2 { animation-delay: 0.16s; }
+.auth-d3 { animation-delay: 0.24s; }
+.auth-d4 { animation-delay: 0.32s; }
+.auth-d5 { animation-delay: 0.40s; }
+.auth-d6 { animation-delay: 0.48s; }
+.auth-d7 { animation-delay: 0.56s; }
+.auth-d8 { animation-delay: 0.64s; }
+
+@keyframes authSlideRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.auth-panel {
+  opacity: 0;
+  animation: authSlideRight 0.65s cubic-bezier(.22,1,.36,1) 0.1s both;
+}
+
+@keyframes authFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+.auth-float {
+  animation: authFloat 4s ease-in-out infinite;
+}
+
+/* Pink glass input */
+.glass-input-wrap {
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, background 0.2s;
+}
+.glass-input-wrap:focus-within {
+  border-color: rgba(236,72,153,0.55);
+  background: rgba(236,72,153,0.07);
+}
+.glass-input-wrap input {
+  width: 100%;
+  background: transparent;
+  color: #fff;
+  font-size: 0.875rem;
+  padding: 14px 16px;
+  border-radius: 14px;
+  outline: none;
+}
+.glass-input-wrap input::placeholder { color: #52525b; }
+
 /* Garante que o vídeo nunca exiba controles nativos mesmo via shadow DOM */
 video::-webkit-media-controls { display: none !important; }
 video::-webkit-media-controls-enclosure { display: none !important; }
