@@ -10,7 +10,7 @@ import {
   Sliders, ListOrdered, LayoutTemplate, Rocket, X, ChevronRight,
 } from 'lucide-react';
 import { listEvents } from '../services/eventService';
-import { listPresells, listUpsells, getPresellsByCallId } from '../services/presellService';
+import { listPresells, listUpsells, listDownsells, getPresellsByCallId } from '../services/presellService';
 import { listVideos, type Video } from '../services/videoService';
 
 const inputCls = "w-full bg-[#111115] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
@@ -50,6 +50,7 @@ export default function EditCallPage() {
   const [loopVideo, setLoopVideo] = useState(true);
   const [callMode, setCallMode] = useState<'incoming' | 'outgoing'>('incoming');
   const [endCallRedirectUrl, setEndCallRedirectUrl] = useState('');
+  const [redirectMode, setRedirectMode] = useState<'none' | 'upsell' | 'downsell' | 'presell' | 'custom'>('none');
   const [billingMode, setBillingMode] = useState<'none' | 'credits'>('none');
   const [videoId, setVideoId] = useState('');
   const [showVideoPicker, setShowVideoPicker] = useState(false);
@@ -69,7 +70,13 @@ export default function EditCallPage() {
     setLoopVideo(call.loop_video ?? true);
     setCallMode((call.call_mode as 'incoming' | 'outgoing') ?? 'incoming');
     setBillingMode((call.billing_mode as 'none' | 'credits') ?? 'none');
-    setEndCallRedirectUrl(call.end_call_redirect_url ?? '');
+    const redir = call.end_call_redirect_url ?? '';
+    setEndCallRedirectUrl(redir);
+    if (redir.startsWith('/u/')) setRedirectMode('upsell');
+    else if (redir.startsWith('/d/')) setRedirectMode('downsell');
+    else if (redir.startsWith('/p/')) setRedirectMode('presell');
+    else if (redir) setRedirectMode('custom');
+    else setRedirectMode('none');
     setVideoId(call.video_id ?? '');
     initialized.current = true;
   }
@@ -121,6 +128,12 @@ export default function EditCallPage() {
     queryFn: () => listUpsells(1),
   });
   const upsells = upsellsData?.data ?? [];
+
+  const { data: downsellsData } = useQuery({
+    queryKey: ['downsells', 1],
+    queryFn: () => listDownsells(1),
+  });
+  const downsells = downsellsData?.data ?? [];
 
   const { data: linkedPresells = [] } = useQuery({
     queryKey: ['call-presells', id],
@@ -550,9 +563,9 @@ export default function EditCallPage() {
         </div>
 
         {/* Redirect ao encerrar */}
-        <div className="bg-[#18181b] border border-white/5 rounded-2xl p-5 space-y-3">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+        <div className="bg-[#18181b] border border-white/5 rounded-2xl p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
               <Navigation size={16} className="text-purple-400" />
             </div>
             <div>
@@ -561,59 +574,149 @@ export default function EditCallPage() {
             </div>
           </div>
 
-          {upsells.length > 0 && (
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-400">Página de upsell (pós-call)</label>
-              <select
-                value={upsells.find(u => endCallRedirectUrl === `/u/${u.slug}`)?.id ?? ''}
-                onChange={e => {
-                  const u = upsells.find(x => x.id === e.target.value);
-                  setEndCallRedirectUrl(u ? `/u/${u.slug}` : '');
+          {/* Modo */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {([
+              { value: 'none', label: '✕ Nenhum', desc: 'Tela de encerramento' },
+              { value: 'upsell', label: '↑ Upsell', desc: 'Oferta pós-call' },
+              { value: 'downsell', label: '↓ Downsell', desc: 'Oferta de recuperação' },
+              { value: 'presell', label: '⊙ Presell', desc: 'Reaquecer o lead' },
+              { value: 'custom', label: '✎ URL manual', desc: 'Link externo' },
+            ] as const).map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setRedirectMode(opt.value);
+                  if (opt.value === 'none') setEndCallRedirectUrl('');
                 }}
-                className={inputCls + ' cursor-pointer'}
+                className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border text-left transition-all ${
+                  redirectMode === opt.value
+                    ? 'bg-purple-500/10 border-purple-500/40 text-white'
+                    : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                }`}
               >
-                <option value="">— Nenhuma —</option>
-                {upsells.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.config.name || u.config.headline?.slice(0, 30) || u.slug} (/u/{u.slug})
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-gray-600">Exibida automaticamente quando a call encerrar</p>
-            </div>
-          )}
-
-          {presells.length > 0 && (
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-400">Ou redirecionar para presell</label>
-              <select
-                value={presells.find(p => endCallRedirectUrl === `/p/${p.slug}`)?.id ?? ''}
-                onChange={e => {
-                  const p = presells.find(x => x.id === e.target.value);
-                  setEndCallRedirectUrl(p ? `/p/${p.slug}` : '');
-                }}
-                className={inputCls + ' cursor-pointer'}
-              >
-                <option value="">— Nenhuma —</option>
-                {presells.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.config.name || p.slug} (/p/{p.slug})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-400">URL de destino (manual)</label>
-            <input
-              value={endCallRedirectUrl}
-              onChange={e => setEndCallRedirectUrl(e.target.value)}
-              placeholder="/u/abc123, /p/abc123 ou https://..."
-              className={inputCls}
-            />
-            <p className="text-xs text-gray-600">Deixe vazio para mostrar a tela padrão de "Chamada encerrada"</p>
+                <span className="text-xs font-semibold">{opt.label}</span>
+                <span className="text-[10px] opacity-60">{opt.desc}</span>
+              </button>
+            ))}
           </div>
+
+          {/* Picker de upsell */}
+          {redirectMode === 'upsell' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-400">Selecionar upsell</label>
+              {upsells.length === 0 ? (
+                <div className="flex items-center justify-between bg-[#111115] border border-white/5 rounded-xl px-4 py-3">
+                  <p className="text-xs text-gray-500">Nenhum upsell criado ainda.</p>
+                  <Link to="/upsell/new" className="text-xs text-purple-400 hover:text-purple-300 font-medium">+ Criar →</Link>
+                </div>
+              ) : (
+                <select
+                  value={upsells.find(u => endCallRedirectUrl === `/u/${u.slug}`)?.id ?? ''}
+                  onChange={e => {
+                    const u = upsells.find(x => x.id === e.target.value);
+                    setEndCallRedirectUrl(u ? `/u/${u.slug}` : '');
+                  }}
+                  className={inputCls + ' cursor-pointer'}
+                >
+                  <option value="">— Escolha um upsell —</option>
+                  {upsells.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.config.name || u.config.headline?.slice(0, 40) || u.slug} (/u/{u.slug})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {endCallRedirectUrl && (
+                <p className="text-xs text-purple-400 font-mono bg-purple-500/10 px-3 py-1.5 rounded-lg">{endCallRedirectUrl}</p>
+              )}
+            </div>
+          )}
+
+          {/* Picker de downsell */}
+          {redirectMode === 'downsell' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-400">Selecionar downsell</label>
+              {downsells.length === 0 ? (
+                <div className="flex items-center justify-between bg-[#111115] border border-white/5 rounded-xl px-4 py-3">
+                  <p className="text-xs text-gray-500">Nenhum downsell criado ainda.</p>
+                  <Link to="/downsell/new" className="text-xs text-yellow-400 hover:text-yellow-300 font-medium">+ Criar →</Link>
+                </div>
+              ) : (
+                <select
+                  value={downsells.find(d => endCallRedirectUrl === `/d/${d.slug}`)?.id ?? ''}
+                  onChange={e => {
+                    const d = downsells.find(x => x.id === e.target.value);
+                    setEndCallRedirectUrl(d ? `/d/${d.slug}` : '');
+                  }}
+                  className={inputCls + ' cursor-pointer'}
+                >
+                  <option value="">— Escolha um downsell —</option>
+                  {downsells.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.config.name || d.config.headline?.slice(0, 40) || d.slug} (/d/{d.slug})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {endCallRedirectUrl && (
+                <p className="text-xs text-yellow-400 font-mono bg-yellow-500/10 px-3 py-1.5 rounded-lg">{endCallRedirectUrl}</p>
+              )}
+            </div>
+          )}
+
+          {/* Picker de presell */}
+          {redirectMode === 'presell' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-400">Selecionar presell</label>
+              {presells.length === 0 ? (
+                <div className="flex items-center justify-between bg-[#111115] border border-white/5 rounded-xl px-4 py-3">
+                  <p className="text-xs text-gray-500">Nenhum presell criado ainda.</p>
+                  <Link to="/presell/new" className="text-xs text-blue-400 hover:text-blue-300 font-medium">+ Criar →</Link>
+                </div>
+              ) : (
+                <select
+                  value={presells.find(p => endCallRedirectUrl === `/p/${p.slug}`)?.id ?? ''}
+                  onChange={e => {
+                    const p = presells.find(x => x.id === e.target.value);
+                    setEndCallRedirectUrl(p ? `/p/${p.slug}` : '');
+                  }}
+                  className={inputCls + ' cursor-pointer'}
+                >
+                  <option value="">— Escolha um presell —</option>
+                  {presells.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.config.name || p.config.headline?.slice(0, 40) || p.slug} (/p/{p.slug})
+                    </option>
+                  ))}
+                </select>
+              )}
+              {endCallRedirectUrl && (
+                <p className="text-xs text-blue-400 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg">{endCallRedirectUrl}</p>
+              )}
+            </div>
+          )}
+
+          {/* URL manual */}
+          {redirectMode === 'custom' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-gray-400">URL de destino</label>
+              <input
+                value={endCallRedirectUrl}
+                onChange={e => setEndCallRedirectUrl(e.target.value)}
+                placeholder="https://... ou /c/abc123"
+                className={inputCls}
+              />
+              <p className="text-xs text-gray-600">Qualquer URL — external, outra call, landing page, etc.</p>
+            </div>
+          )}
+
+          {redirectMode === 'none' && (
+            <p className="text-xs text-gray-600 bg-white/[0.03] border border-white/5 rounded-xl px-4 py-3">
+              Será exibida a tela padrão de "Chamada encerrada" com opção de ligar novamente.
+            </p>
+          )}
         </div>
 
         {/* Presells vinculados */}

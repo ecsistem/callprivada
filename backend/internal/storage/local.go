@@ -72,6 +72,12 @@ func (l *LocalStorage) PresignGet(_ context.Context, key string, ttl time.Durati
 	return u, nil
 }
 
+// PublicURL para local storage retorna a mesma URL autenticada com TTL longo (sem expiração prática).
+func (l *LocalStorage) PublicURL(key string) string {
+	u, _ := l.PresignGet(context.Background(), key, 365*24*time.Hour)
+	return u
+}
+
 // Verify valida o token e a expiração de uma URL local.
 func (l *LocalStorage) Verify(key, expires, token string) bool {
 	exp, err := strconv.ParseInt(expires, 10, 64)

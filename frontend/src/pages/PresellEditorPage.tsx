@@ -873,7 +873,7 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
                       value={upsells.find(u => config.redirect_url === `/u/${u.slug}`)?.id ?? ''}
                       onChange={e => {
                         const page = upsells.find(u => u.id === e.target.value);
-                        if (page) setField('redirect_url', `/u/${page.slug}`);
+                        setField('redirect_url', page ? `/u/${page.slug}` : '');
                       }}
                       className={inputCls}
                     >

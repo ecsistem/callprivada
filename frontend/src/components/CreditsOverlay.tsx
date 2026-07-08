@@ -112,7 +112,7 @@ export default function CreditsOverlay({
       const r = await createPixPayment(slug, pkg.price_cents, {
         payer_name: 'Visitante',
         payer_document: '00000000000',
-        payer_email: 'lead@hotcall.app',
+        payer_email: 'lead@callprivada.app',
       });
       setTxnId(r.transaction_id);
       setQrCode(r.qr_code);

@@ -24,10 +24,12 @@ type S3Config struct {
 }
 
 type S3Client struct {
-	client   *s3.Client
-	presign  *s3.PresignClient // cliente separado com endpoint público para URLs corretas
-	up       *manager.Uploader
-	bucket   string
+	client         *s3.Client
+	presign        *s3.PresignClient
+	up             *manager.Uploader
+	bucket         string
+	publicEndpoint string // host público para URLs permanentes (ex: storage.callprivada.online)
+	useSSL         bool
 }
 
 func makeS3Client(endpoint, region, accessKey, secretKey string, useSSL bool) (*s3.Client, error) {
@@ -73,11 +75,18 @@ func NewS3Client(cfg S3Config) (*S3Client, error) {
 		return nil, err
 	}
 
+	publicEndpoint := cfg.PublicEndpoint
+	if publicEndpoint == "" {
+		publicEndpoint = cfg.Endpoint
+	}
+
 	return &S3Client{
-		client:  internal,
-		presign: s3.NewPresignClient(pub),
-		up:      manager.NewUploader(internal, func(u *manager.Uploader) { u.PartSize = 10 * 1024 * 1024 }),
-		bucket:  cfg.Bucket,
+		client:         internal,
+		presign:        s3.NewPresignClient(pub),
+		up:             manager.NewUploader(internal, func(u *manager.Uploader) { u.PartSize = 10 * 1024 * 1024 }),
+		bucket:         cfg.Bucket,
+		publicEndpoint: publicEndpoint,
+		useSSL:         cfg.UseSSL,
 	}, nil
 }
 
@@ -99,6 +108,20 @@ func (s *S3Client) Delete(ctx context.Context, key string) error {
 		Key:    aws.String(key),
 	})
 	return err
+}
+
+// PublicURL retorna uma URL permanente para objetos em buckets públicos.
+func (s *S3Client) PublicURL(key string) string {
+	scheme := "http"
+	if s.useSSL {
+		scheme = "https"
+	}
+	// Se o endpoint público não tem esquema, adiciona https por padrão para domínios reais.
+	endpoint := s.publicEndpoint
+	if len(endpoint) > 0 && endpoint[0] != 'h' {
+		scheme = "https"
+	}
+	return fmt.Sprintf("%s://%s/%s/%s", scheme, endpoint, s.bucket, key)
 }
 
 // PresignGet gera uma URL pré-assinada para download (GET) com TTL configurável.

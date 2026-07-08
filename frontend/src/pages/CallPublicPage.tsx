@@ -505,15 +505,15 @@ export default function CallPublicPage() {
   const [fakeNotifs, setFakeNotifs] = useState<FakeNotif[]>([]);
   const notifCounterRef = useRef(0);
   const [paymentDone, setPaymentDone] = useState(() =>
-    slug ? localStorage.getItem(`hotcall_paid_${slug}`) === '1' : false
+    slug ? localStorage.getItem(`callprivada_paid_${slug}`) === '1' : false
   );
   // Persiste que o reconnect_paywall foi disparado nesta chamada
   const [paywallBlocked, setPaywallBlocked] = useState(() =>
-    slug ? localStorage.getItem(`hotcall_paywall_${slug}`) === '1' : false
+    slug ? localStorage.getItem(`callprivada_paywall_${slug}`) === '1' : false
   );
   // Persiste o ID do fake_billing / video_lock / phone_block / tip_jar ativo para restaurar no refresh
   const [pendingBillingId, setPendingBillingId] = useState(() =>
-    slug ? localStorage.getItem(`hotcall_billing_${slug}`) ?? null : null
+    slug ? localStorage.getItem(`callprivada_billing_${slug}`) ?? null : null
   );
   const [creditsSeconds, setCreditsSeconds] = useState(0);
   const [creditsGranted, setCreditsGranted] = useState(false);
@@ -623,7 +623,7 @@ export default function CallPublicPage() {
       firedEvents.current.add(evt.id);
     } else {
       // evento não existe mais — limpa
-      if (slug) localStorage.removeItem(`hotcall_billing_${slug}`);
+      if (slug) localStorage.removeItem(`callprivada_billing_${slug}`);
       setPendingBillingId(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -754,12 +754,12 @@ export default function CallPublicPage() {
               video.pause();
               setPlaying(false);
               // persiste para mostrar imediatamente em caso de refresh
-              if (slug) localStorage.setItem(`hotcall_paywall_${slug}`, '1');
+              if (slug) localStorage.setItem(`callprivada_paywall_${slug}`, '1');
               setPaywallBlocked(true);
             }
             if (evt.type === 'fake_billing' || evt.type === 'video_lock' || evt.type === 'phone_block' || evt.type === 'tip_jar') {
               // persiste para restaurar em caso de refresh
-              if (slug) localStorage.setItem(`hotcall_billing_${slug}`, evt.id);
+              if (slug) localStorage.setItem(`callprivada_billing_${slug}`, evt.id);
               setPendingBillingId(evt.id);
             }
             if (evt.type === 'video_lock' || evt.type === 'phone_block') {
@@ -780,7 +780,7 @@ export default function CallPublicPage() {
 
   function dismissEvent() {
     if (activeEvent && BILLING_TYPES.includes(activeEvent.type)) {
-      if (slug) localStorage.removeItem(`hotcall_billing_${slug}`);
+      if (slug) localStorage.removeItem(`callprivada_billing_${slug}`);
       setPendingBillingId(null);
     }
     setActiveEvent(null);
@@ -788,8 +788,8 @@ export default function CallPublicPage() {
 
   function resumeVideo() {
     if (slug) {
-      localStorage.removeItem(`hotcall_paywall_${slug}`);
-      localStorage.removeItem(`hotcall_billing_${slug}`);
+      localStorage.removeItem(`callprivada_paywall_${slug}`);
+      localStorage.removeItem(`callprivada_billing_${slug}`);
     }
     setPaywallBlocked(false);
     setPendingBillingId(null);
@@ -907,7 +907,7 @@ export default function CallPublicPage() {
         photoUrl={call.contact_photo_url}
         priceCents={call.entry_price_cents}
         onPay={() => {
-          if (slug) localStorage.setItem(`hotcall_paid_${slug}`, '1');
+          if (slug) localStorage.setItem(`callprivada_paid_${slug}`, '1');
           setPaymentDone(true);
         }}
       />

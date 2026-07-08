@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -57,13 +56,12 @@ func (s *PresellService) UploadImage(ctx context.Context, userID uuid.UUID, r io
 		return "", "", err
 	}
 
-	url, _ := s.storage.PresignGet(ctx, key, 4*time.Hour)
-	return key, url, nil
+	return key, s.storage.PublicURL(key), nil
 }
 
 // PresignImageURL returns a presigned URL for an existing storage key.
 func (s *PresellService) PresignImageURL(ctx context.Context, key string) (string, error) {
-	return s.storage.PresignGet(ctx, key, 4*time.Hour)
+	return s.storage.PublicURL(key), nil
 }
 
 func (s *PresellService) Create(ctx context.Context, userID uuid.UUID, in CreatePresellInput) (*domain.PresellPage, error) {

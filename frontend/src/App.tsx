@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import { useAuthStore } from './stores/authStore';
 import { dracofyPageview } from './lib/dracofy';
 import { PrivateRoute } from './routes/PrivateRoute';
@@ -45,6 +46,7 @@ export default function App() {
   return (
     <Routes>
       {/* Público */}
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/c/:slug" element={<CallPublicPage />} />
@@ -82,7 +84,7 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

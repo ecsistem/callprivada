@@ -77,7 +77,7 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
     createPixPayment(slug, event.billing_amount_cents, {
       payer_name:     event.billing_payer_name     || 'Visitante',
       payer_document: event.billing_payer_document || '00000000000',
-      payer_email:    event.billing_payer_email    || 'lead@hotcall.app',
+      payer_email:    event.billing_payer_email    || 'lead@callprivada.app',
       payer_phone:    event.billing_payer_phone    || '',
     })
       .then((r) => { setResult(r); setStep('qr'); startPolling(r.transaction_id, r.zuckpay_txn_id); })

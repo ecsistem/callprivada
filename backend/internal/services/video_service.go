@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -97,7 +96,7 @@ func (s *VideoService) PresignURL(ctx context.Context, userID, videoID uuid.UUID
 	if v.Status != domain.VideoStatusReady {
 		return "", domain.ErrVideoNotReady
 	}
-	return s.storage.PresignGet(ctx, v.StorageKey, time.Hour)
+	return s.storage.PublicURL(v.StorageKey), nil
 }
 
 func (s *VideoService) Delete(ctx context.Context, userID, videoID uuid.UUID) error {

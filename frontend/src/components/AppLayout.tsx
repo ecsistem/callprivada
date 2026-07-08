@@ -72,7 +72,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-900/40">
             <Phone size={15} className="text-white" />
           </div>
-          <span className="text-white font-bold text-base tracking-tight">HotCall</span>
+          <span className="text-white font-bold text-base tracking-tight">CallPrivada</span>
         </Link>
         {onClose && (
           <button onClick={onClose} className="text-gray-500 hover:text-white p-1">
@@ -147,7 +147,7 @@ export default function AppLayout() {
             <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
               <Phone size={12} className="text-white" />
             </div>
-            <span className="text-white font-bold text-sm">HotCall</span>
+            <span className="text-white font-bold text-sm">CallPrivada</span>
           </div>
           <div className="w-8" />
         </header>

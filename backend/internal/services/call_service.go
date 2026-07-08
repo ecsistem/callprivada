@@ -239,10 +239,7 @@ func (s *CallService) GetPublic(ctx context.Context, slug string) (*PublicCallDa
 		storageKey = v.StorageKey
 	}
 
-	videoURL, err := s.storage.PresignGet(ctx, storageKey, 4*time.Hour)
-	if err != nil {
-		return nil, err
-	}
+	videoURL := s.storage.PublicURL(storageKey)
 
 	events, err := s.events.FindByCallID(ctx, call.ID)
 	if err != nil {
@@ -285,9 +282,9 @@ func (s *CallService) SetContactPhoto(ctx context.Context, userID, callID uuid.U
 	return call, nil
 }
 
-// PresignImageURL retorna URL temporária para uma imagem da chamada.
+// PresignImageURL retorna URL permanente para uma imagem da chamada.
 func (s *CallService) PresignImageURL(ctx context.Context, key string) (string, error) {
-	return s.storage.PresignGet(ctx, key, time.Hour)
+	return s.storage.PublicURL(key), nil
 }
 
 func (s *CallService) ownerCall(ctx context.Context, userID, callID uuid.UUID) (*domain.Call, error) {
