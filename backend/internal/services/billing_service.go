@@ -37,11 +37,12 @@ type CreateBillingInput struct {
 }
 
 type BillingResult struct {
-	TransactionID string `json:"transaction_id"`
-	QRCode        string `json:"qr_code"`
-	QRCodeURL     string `json:"qr_code_url"`
-	CheckoutURL   string `json:"checkout_url"`
-	AmountCents   int    `json:"amount_cents"`
+	TransactionID  string `json:"transaction_id"`
+	ZuckPayTxnID   string `json:"zuckpay_txn_id"`
+	QRCode         string `json:"qr_code"`
+	QRCodeURL      string `json:"qr_code_url"`
+	CheckoutURL    string `json:"checkout_url"`
+	AmountCents    int    `json:"amount_cents"`
 }
 
 func (s *BillingService) CreatePIX(ctx context.Context, in CreateBillingInput) (*BillingResult, error) {
@@ -101,6 +102,7 @@ func (s *BillingService) CreatePIX(ctx context.Context, in CreateBillingInput) (
 
 	return &BillingResult{
 		TransactionID: txn.ID.String(),
+		ZuckPayTxnID:  pixResp.TransactionID,
 		QRCode:        pixResp.QRCode,
 		QRCodeURL:     pixResp.QRCodeURL,
 		CheckoutURL:   pixResp.CheckoutURL,
@@ -130,6 +132,25 @@ func (s *BillingService) GetPixStatus(ctx context.Context, txnID uuid.UUID) (str
 	}
 
 	return txn.Status, txn.AmountCents, nil
+}
+
+// GetPixStatusByZuckPayID consulta o status diretamente no ZuckPay usando o ID deles.
+// Usado quando o frontend tem o zuckpay_txn_id mas pode não ter o nosso UUID.
+func (s *BillingService) GetPixStatusByZuckPayID(ctx context.Context, slug, zuckPayTxnID string) (string, error) {
+	call, err := s.calls.FindBySlug(ctx, slug)
+	if err != nil {
+		return "", err
+	}
+	cfg, err := s.configs.FindByUserID(ctx, call.UserID)
+	if err != nil || !cfg.IsConfigured() {
+		return "", domain.ErrPaymentNotConfigured
+	}
+	client := zuckpay.NewClient(cfg.ZuckPayClientID, cfg.ZuckPayClientSecret)
+	zResp, err := client.GetTransactionStatus(zuckPayTxnID)
+	if err != nil {
+		return "", err
+	}
+	return zResp.Status, nil
 }
 
 func (s *BillingService) getConfigForTransaction(ctx context.Context, txn *domain.BillingTransaction) (*domain.UserPaymentConfig, error) {

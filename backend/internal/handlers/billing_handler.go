@@ -73,8 +73,24 @@ func (h *BillingHandler) CreatePIX(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"data": result})
 }
 
-// GetPixStatus — GET /public/billing/transactions/:id/status
+// GetPixStatus — GET /public/billing/transactions/:id/status?zuckpay_txn_id=XXX&slug=YYYY
 func (h *BillingHandler) GetPixStatus(c *gin.Context) {
+	// Caminho rápido: consulta direta ao ZuckPay se temos o ID deles.
+	zuckPayID := c.Query("zuckpay_txn_id")
+	slug := c.Query("slug")
+	if zuckPayID != "" && slug != "" {
+		status, err := h.billing.GetPixStatusByZuckPayID(c.Request.Context(), slug, zuckPayID)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"data": gin.H{
+			"status": status,
+			"paid":   status == "PAID",
+		}})
+		return
+	}
+
 	txnID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "id inválido"}})
@@ -123,7 +139,16 @@ func (h *BillingHandler) ZuckPayWebhook(c *gin.Context) {
 
 	status := payload.Transaction.Status
 	if status == "" {
-		status = "PAID"
+		switch payload.Event {
+		case "payment_approved":
+			status = "PAID"
+		case "payment_refused":
+			status = "FAILED"
+		case "payment_pending":
+			status = "PENDING"
+		default:
+			status = "PAID"
+		}
 	}
 
 	result, err := h.billing.ProcessWebhook(

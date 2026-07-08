@@ -2,6 +2,7 @@ import api from './api';
 
 export interface BillingResult {
   transaction_id: string;
+  zuckpay_txn_id: string;
   qr_code: string;
   qr_code_url: string;
   checkout_url: string;
@@ -33,9 +34,16 @@ export interface PixStatusResult {
   paid: boolean;
 }
 
-export async function checkPixStatus(transactionId: string): Promise<PixStatusResult> {
+export async function checkPixStatus(
+  transactionId: string,
+  opts?: { zuckpayTxnId?: string; slug?: string },
+): Promise<PixStatusResult> {
+  const params = new URLSearchParams();
+  if (opts?.zuckpayTxnId) params.set('zuckpay_txn_id', opts.zuckpayTxnId);
+  if (opts?.slug) params.set('slug', opts.slug);
+  const qs = params.toString() ? `?${params}` : '';
   const { data } = await api.get<{ data: PixStatusResult }>(
-    `/public/billing/transactions/${transactionId}/status`,
+    `/public/billing/transactions/${transactionId}/status${qs}`,
   );
   return data.data;
 }

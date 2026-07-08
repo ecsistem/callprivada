@@ -1,7 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { createPixPayment, checkPixStatus, type BillingResult } from '../services/billingService';
 import type { PublicEvent } from '../services/callService';
+
+function useQRCode(text: string | undefined) {
+  const [dataUrl, setDataUrl] = useState<string>('');
+  const generate = useCallback(async (t: string) => {
+    try {
+      const url = await QRCode.toDataURL(t, { width: 220, margin: 1, color: { dark: '#000', light: '#fff' } });
+      setDataUrl(url);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { if (text) generate(text); }, [text, generate]);
+  return dataUrl;
+}
 
 interface Props {
   event: PublicEvent;
@@ -36,11 +49,13 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
   const [email, setEmail] = useState(event.billing_payer_email ?? '');
   const [phone, setPhone] = useState(event.billing_payer_phone ?? '');
 
-  function startPolling(txnId: string) {
+  const qrDataUrl = useQRCode(result?.qr_code);
+
+  function startPolling(txnId: string, zuckpayTxnId?: string) {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const s = await checkPixStatus(txnId);
+        const s = await checkPixStatus(txnId, { zuckpayTxnId, slug });
         if (s.paid) {
           clearInterval(pollRef.current!);
           pollRef.current = null;
@@ -65,7 +80,7 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
       payer_email:    event.billing_payer_email    || 'lead@hotcall.app',
       payer_phone:    event.billing_payer_phone    || '',
     })
-      .then((r) => { setResult(r); setStep('qr'); startPolling(r.transaction_id); })
+      .then((r) => { setResult(r); setStep('qr'); startPolling(r.transaction_id, r.zuckpay_txn_id); })
       .catch(() => { setErrMsg('Não foi possível gerar o PIX. Tente novamente.'); setStep('error'); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -82,7 +97,7 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
       });
       setResult(r);
       setStep('qr');
-      startPolling(r.transaction_id);
+      startPolling(r.transaction_id, r.zuckpay_txn_id);
     } catch {
       setErrMsg('Não foi possível gerar o PIX. Tente novamente.');
       setStep('error');
@@ -93,7 +108,7 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
     if (!result) return;
     setStep('checking');
     try {
-      const s = await checkPixStatus(result.transaction_id);
+      const s = await checkPixStatus(result.transaction_id, { zuckpayTxnId: result.zuckpay_txn_id, slug });
       if (s.paid) {
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
         setStep('paid');
@@ -180,8 +195,17 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
           <p className="text-gray-400 text-xs mt-0.5">Pagamento via PIX • instantâneo</p>
         </div>
 
-        {/* QR code */}
-        {result.qr_code_url && (
+        {/* QR code gerado localmente a partir do código PIX */}
+        {qrDataUrl ? (
+          <div className="rounded-2xl bg-white p-3 shadow-lg shadow-black/40">
+            <img
+              src={qrDataUrl}
+              alt="QR code PIX"
+              className="w-44 h-44 block"
+              onContextMenu={(e) => e.preventDefault()}
+            />
+          </div>
+        ) : result.qr_code_url ? (
           <div className="rounded-2xl bg-white p-3 shadow-lg shadow-black/40">
             <img
               src={result.qr_code_url}
@@ -190,7 +214,7 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
               onContextMenu={(e) => e.preventDefault()}
             />
           </div>
-        )}
+        ) : null}
 
         {/* Código copia-e-cola */}
         {result.qr_code && (
