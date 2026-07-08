@@ -86,6 +86,40 @@ func (c *Client) CreatePixQRCode(req PixQRCodeRequest) (*PixQRCodeResponse, erro
 	return &result, nil
 }
 
+// TransactionStatusResponse é a resposta da consulta de status de uma transação.
+type TransactionStatusResponse struct {
+	TransactionID string  `json:"transactionId"`
+	Status        string  `json:"status"`
+	Amount        float64 `json:"amount"`
+}
+
+// GetTransactionStatus consulta o status atual de uma transação diretamente na API ZuckPay.
+func (c *Client) GetTransactionStatus(transactionID string) (*TransactionStatusResponse, error) {
+	httpReq, err := http.NewRequest(http.MethodGet, baseURL+"/conta/v3/pix/status?transactionId="+transactionID, nil)
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.SetBasicAuth(c.clientID, c.clientSecret)
+
+	resp, err := c.http.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("zuckpay status request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("zuckpay status error %d: %s", resp.StatusCode, string(raw))
+	}
+
+	var result TransactionStatusResponse
+	if err := json.Unmarshal(raw, &result); err != nil {
+		return nil, fmt.Errorf("zuckpay status parse error: %w", err)
+	}
+	return &result, nil
+}
+
 // VerifyWebhookSignature valida o header X-ZuckPay-Signature usando HMAC-SHA256
 // com o client_secret do usuário como chave.
 func VerifyWebhookSignature(rawBody []byte, signature, clientSecret string) error {

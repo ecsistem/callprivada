@@ -8,15 +8,25 @@ import (
 )
 
 const (
-	EventTypePopup       = "popup"
-	EventTypeFullscreen  = "fullscreen"
-	EventTypeFakeBilling = "fake_billing"
-	EventTypeOfferCall   = "offer_call"
-	EventTypeCountdown         = "countdown"
-	EventTypeUpsell            = "upsell"
-	EventTypeReconnectPaywall  = "reconnect_paywall"
-	EventTypeSignalDrop        = "signal_drop"
-	EventTypeFakeTyping        = "fake_typing"
+	EventTypePopup              = "popup"
+	EventTypeFullscreen         = "fullscreen"
+	EventTypeFakeBilling        = "fake_billing"
+	EventTypeOfferCall          = "offer_call"
+	EventTypeCountdown          = "countdown"
+	EventTypeUpsell             = "upsell"
+	EventTypeReconnectPaywall   = "reconnect_paywall"
+	EventTypeSignalDrop         = "signal_drop"
+	EventTypeFakeTyping         = "fake_typing"
+	EventTypeScreenshotAlert    = "screenshot_alert"
+	EventTypeBatteryLow         = "battery_low"
+	EventTypeIncomingCall       = "incoming_call"
+	EventTypeFakeGift           = "fake_gift"
+	EventTypeViewerCount        = "viewer_count"
+	EventTypeSocialProof        = "social_proof"
+	EventTypeExclusiveAccess    = "exclusive_access"
+	EventTypeTipJar             = "tip_jar"
+	EventTypeVideoLock          = "video_lock"
+	EventTypePhoneBlock         = "phone_block"
 )
 
 type CallEvent struct {

@@ -800,6 +800,15 @@ _Frontend:_
 - Call → Upsell (in-call): evento `upsell` na timeline com `upsell_slug` navega para página.
 - Presell → Downsell: exit-intent existente, agora visível na FunnelsPage.
 
+## [2026-07-08] — Deploy production-ready
+
+### Backend
+- `cmd/api/main.go`: seed de usuário admin (`contato@edsoncosta.online`) na inicialização — idempotente, só cria se não existir.
+
+### Infra
+- `docker-compose.yml`: removido serviço `nginx`; backend e frontend conectados à rede `convtrack_default` (Caddy existente faz proxy reverso).
+- `docs/DEPLOY.md`: tutorial completo de deploy para aaPanel + Docker + Caddy + MinIO na VPS.
+
 ## [2026-07-06] — Vínculos bidirecionais, analytics de funil, preview mobile, limites de plano
 
 ### Backend

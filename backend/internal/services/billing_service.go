@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-
 	"github.com/google/uuid"
 
 	"github.com/callprivada/fwlc-backend/internal/domain"
@@ -97,14 +96,8 @@ func (s *BillingService) CreatePIX(ctx context.Context, in CreateBillingInput) (
 		return nil, fmt.Errorf("falha ao criar cobrança PIX: %w", err)
 	}
 
-	// Atualiza a transação com os dados retornados pelo ZuckPay.
-	txn.ZuckPayTxnID = pixResp.TransactionID
-	txn.QRCode = pixResp.QRCode
-	txn.QRCodeURL = pixResp.QRCodeURL
-	txn.CheckoutURL = pixResp.CheckoutURL
-
-	// Persiste os dados ZuckPay (update manual via UpdateStatus não basta — usamos upsert via Create com ID já definido).
-	// Como o repo não tem Update completo, usamos os campos no resultado apenas.
+	// Persiste o ZuckPayTxnID para que o polling possa consultar o status diretamente.
+	_ = s.txns.UpdateZuckPayID(ctx, txn.ID, pixResp.TransactionID)
 
 	return &BillingResult{
 		TransactionID: txn.ID.String(),
@@ -116,12 +109,35 @@ func (s *BillingService) CreatePIX(ctx context.Context, in CreateBillingInput) (
 }
 
 // GetPixStatus retorna o status de uma transação PIX pelo ID.
+// Se ainda PENDING e tivermos o ZuckPayTxnID, consulta a API do ZuckPay diretamente
+// como fallback para quando o webhook não chegou.
 func (s *BillingService) GetPixStatus(ctx context.Context, txnID uuid.UUID) (string, int, error) {
 	txn, err := s.txns.FindByID(ctx, txnID)
 	if err != nil {
 		return "", 0, err
 	}
+
+	if txn.Status == "PENDING" && txn.ZuckPayTxnID != "" {
+		cfg, err := s.getConfigForTransaction(ctx, txn)
+		if err == nil {
+			client := zuckpay.NewClient(cfg.ZuckPayClientID, cfg.ZuckPayClientSecret)
+			zResp, err := client.GetTransactionStatus(txn.ZuckPayTxnID)
+			if err == nil && zResp.Status != "" && zResp.Status != txn.Status {
+				_ = s.txns.UpdateStatus(ctx, txnID, zResp.Status)
+				txn.Status = zResp.Status
+			}
+		}
+	}
+
 	return txn.Status, txn.AmountCents, nil
+}
+
+func (s *BillingService) getConfigForTransaction(ctx context.Context, txn *domain.BillingTransaction) (*domain.UserPaymentConfig, error) {
+	call, err := s.calls.FindByID(ctx, txn.CallID)
+	if err != nil {
+		return nil, err
+	}
+	return s.configs.FindByUserID(ctx, call.UserID)
 }
 
 // ProcessWebhook valida e processa o webhook do ZuckPay.

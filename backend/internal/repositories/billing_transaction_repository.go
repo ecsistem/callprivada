@@ -34,6 +34,13 @@ func (r *billingTransactionRepository) UpdateStatus(ctx context.Context, id uuid
 		Updates(map[string]any{"status": status}).Error
 }
 
+func (r *billingTransactionRepository) UpdateZuckPayID(ctx context.Context, id uuid.UUID, zuckPayID string) error {
+	return r.db.WithContext(ctx).
+		Model(&models.BillingTransaction{}).
+		Where("id = ?", id).
+		Updates(map[string]any{"zuckpay_txn_id": zuckPayID}).Error
+}
+
 func (r *billingTransactionRepository) FindByID(ctx context.Context, id uuid.UUID) (*domain.BillingTransaction, error) {
 	var m models.BillingTransaction
 	err := r.db.WithContext(ctx).Where("id = ?", id).First(&m).Error

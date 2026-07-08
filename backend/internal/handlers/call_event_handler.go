@@ -68,7 +68,7 @@ func toEventDTO(e *domain.CallEvent) eventDTO {
 type upsertEventRequest struct {
 	TriggerAtSeconds     int    `json:"trigger_at_seconds" binding:"min=0"`
 	DurationSeconds      int    `json:"duration_seconds" binding:"min=0"`
-	Type                 string `json:"type" binding:"required,oneof=popup fullscreen fake_billing offer_call countdown upsell reconnect_paywall signal_drop fake_typing"`
+	Type                 string `json:"type" binding:"required,oneof=popup fullscreen fake_billing offer_call countdown upsell reconnect_paywall signal_drop fake_typing screenshot_alert battery_low incoming_call fake_gift viewer_count social_proof exclusive_access tip_jar video_lock phone_block"`
 	Title                string `json:"title" binding:"required,min=1,max=255"`
 	Description          string `json:"description"`
 	ButtonText           string `json:"button_text" binding:"max=100"`

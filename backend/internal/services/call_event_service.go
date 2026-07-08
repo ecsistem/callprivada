@@ -10,12 +10,25 @@ import (
 )
 
 var validEventTypes = map[string]bool{
-	domain.EventTypePopup:       true,
-	domain.EventTypeFullscreen:  true,
-	domain.EventTypeFakeBilling: true,
-	domain.EventTypeOfferCall:   true,
-	domain.EventTypeCountdown:   true,
-	domain.EventTypeUpsell:      true,
+	domain.EventTypePopup:           true,
+	domain.EventTypeFullscreen:      true,
+	domain.EventTypeFakeBilling:     true,
+	domain.EventTypeOfferCall:       true,
+	domain.EventTypeCountdown:       true,
+	domain.EventTypeUpsell:          true,
+	domain.EventTypeReconnectPaywall: true,
+	domain.EventTypeSignalDrop:      true,
+	domain.EventTypeFakeTyping:      true,
+	domain.EventTypeScreenshotAlert: true,
+	domain.EventTypeBatteryLow:      true,
+	domain.EventTypeIncomingCall:    true,
+	domain.EventTypeFakeGift:        true,
+	domain.EventTypeViewerCount:     true,
+	domain.EventTypeSocialProof:     true,
+	domain.EventTypeExclusiveAccess: true,
+	domain.EventTypeTipJar:          true,
+	domain.EventTypeVideoLock:       true,
+	domain.EventTypePhoneBlock:      true,
 }
 
 type CreateEventInput struct {

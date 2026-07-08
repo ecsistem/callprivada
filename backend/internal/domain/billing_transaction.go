@@ -26,5 +26,6 @@ type BillingTransaction struct {
 type BillingTransactionRepository interface {
 	Create(ctx context.Context, t *BillingTransaction) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+	UpdateZuckPayID(ctx context.Context, id uuid.UUID, zuckPayID string) error
 	FindByID(ctx context.Context, id uuid.UUID) (*BillingTransaction, error)
 }

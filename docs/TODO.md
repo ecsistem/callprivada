@@ -207,7 +207,9 @@ Regras:
 - [x] Chamada pública: `end_time_seconds` respeitado via `timeupdate` (loop para `start_time_seconds` ou encerra).
 
 ## Fase 13 — Deploy
-- [ ] nginx com HTTPS.
+- [x] Seed de usuário admin na inicialização do backend (idempotente).
+- [x] `docker-compose.yml` ajustado para produção: sem nginx, containers backend/frontend na rede `convtrack_default` do Caddy.
+- [x] `docs/DEPLOY.md` — tutorial completo de deploy (aaPanel + Docker + Caddy + MinIO + DNS).
 - [ ] Pipeline GitHub Actions completo + variáveis de produção.
 
 ## Modo Créditos por Minuto (aprovado 2026-07-06)
