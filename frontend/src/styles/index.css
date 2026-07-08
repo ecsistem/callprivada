@@ -123,10 +123,10 @@ html, body {
   transform: translateY(0) !important;
 }
 
-/* Garante que o vídeo nunca exiba controles nativos mesmo via shadow DOM */
-video::-webkit-media-controls { display: none !important; }
-video::-webkit-media-controls-enclosure { display: none !important; }
-video::-webkit-media-controls-panel { display: none !important; }
-video::--webkit-media-controls-play-button { display: none !important; }
-video::-webkit-media-controls-timeline { display: none !important; }
-video::-webkit-media-controls-volume-slider { display: none !important; }
+/* Oculta controles nativos apenas em vídeos da chamada (não em previews de upload) */
+video:not(.video-preview)::-webkit-media-controls { display: none !important; }
+video:not(.video-preview)::-webkit-media-controls-enclosure { display: none !important; }
+video:not(.video-preview)::-webkit-media-controls-panel { display: none !important; }
+video:not(.video-preview)::-webkit-media-controls-play-button { display: none !important; }
+video:not(.video-preview)::-webkit-media-controls-timeline { display: none !important; }
+video:not(.video-preview)::-webkit-media-controls-volume-slider { display: none !important; }

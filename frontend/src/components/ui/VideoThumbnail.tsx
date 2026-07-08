@@ -43,7 +43,7 @@ export function VideoThumbnail({ videoId, className = '', playInline = true }: V
           src={url}
           autoPlay
           controls
-          className="w-full h-full object-contain"
+          className="video-preview w-full h-full object-contain"
           onEnded={() => setPlaying(false)}
         />
       </div>

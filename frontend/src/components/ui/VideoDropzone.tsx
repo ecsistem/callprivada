@@ -97,7 +97,7 @@ export function VideoDropzone({
         {previewUrl && (
           <video
             src={previewUrl}
-            className="w-full max-h-52 object-contain"
+            className="video-preview w-full max-h-52 object-contain"
             controls
             muted
             playsInline
