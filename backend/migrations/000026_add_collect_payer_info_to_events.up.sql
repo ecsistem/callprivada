@@ -1,0 +1,1 @@
+ALTER TABLE call_events ADD COLUMN IF NOT EXISTS billing_collect_payer_info BOOLEAN NOT NULL DEFAULT FALSE;

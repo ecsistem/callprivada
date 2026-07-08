@@ -1,0 +1,2 @@
+ALTER TABLE presell_pages
+  ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'presell';

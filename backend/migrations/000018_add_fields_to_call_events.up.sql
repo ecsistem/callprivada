@@ -1,0 +1,3 @@
+ALTER TABLE call_events
+  ADD COLUMN IF NOT EXISTS duration_seconds INT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS offer_call_slug  TEXT NOT NULL DEFAULT '';

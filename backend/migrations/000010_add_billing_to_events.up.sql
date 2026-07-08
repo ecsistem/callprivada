@@ -1,0 +1,2 @@
+ALTER TABLE call_events
+    ADD COLUMN IF NOT EXISTS billing_amount_cents INTEGER NOT NULL DEFAULT 0;

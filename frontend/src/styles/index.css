@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+}
+
+@keyframes slideInTop {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-in-top {
+  animation: slideInTop 0.3s ease-out;
+}
+
+/* Garante que o vídeo nunca exiba controles nativos mesmo via shadow DOM */
+video::-webkit-media-controls { display: none !important; }
+video::-webkit-media-controls-enclosure { display: none !important; }
+video::-webkit-media-controls-panel { display: none !important; }
+video::--webkit-media-controls-play-button { display: none !important; }
+video::-webkit-media-controls-timeline { display: none !important; }
+video::-webkit-media-controls-volume-slider { display: none !important; }

@@ -1,0 +1,5 @@
+ALTER TABLE calls
+  DROP COLUMN IF EXISTS playback_rate,
+  DROP COLUMN IF EXISTS video_zoom,
+  DROP COLUMN IF EXISTS video_x,
+  DROP COLUMN IF EXISTS video_y;

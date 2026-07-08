@@ -1,0 +1,1 @@
+ALTER TABLE user_tracking_configs ADD COLUMN IF NOT EXISTS dracofy_token VARCHAR(255) NOT NULL DEFAULT '';

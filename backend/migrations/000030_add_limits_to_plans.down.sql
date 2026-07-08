@@ -1,0 +1,4 @@
+ALTER TABLE plans
+  DROP COLUMN IF EXISTS max_calls,
+  DROP COLUMN IF EXISTS max_presells,
+  DROP COLUMN IF EXISTS max_videos;
