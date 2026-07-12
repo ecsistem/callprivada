@@ -37,7 +37,7 @@ export async function createPixPayment(
 export async function createWayMBPayment(
   slug: string,
   amountCents: number,
-  method: 'mbway' | 'multibanco' | 'bizum',
+  method: 'mbway' | 'multibanco',
   payload: CreatePixPayload,
 ): Promise<BillingResult> {
   const { data } = await api.post<{ data: BillingResult }>(

@@ -24,6 +24,7 @@ Regras:
 - [x] WayMB: `referenceData.expiresAt` agora aceita string ou número ao desserializar a resposta da API.
 - [x] Pagamentos públicos: `/public/calls/:slug` expõe `active_gateway` e as telas de cobrança trocam de PIX para WayMB quando configurado.
 - [x] Editor de eventos: `age_gate` adicionado à whitelist do backend para permitir criação no editor de vídeo.
+- [x] VideoEditor: `signal_drop` e `screenshot_alert` agora nascem com título válido e não falham na validação obrigatória de `title`.
 - [x] Limite `max_videos` do plano aplicado no upload de vídeo (backend + frontend badge).
 
 ### Tarefas do escopo anterior (CallPrivada genérico) — obsoletas

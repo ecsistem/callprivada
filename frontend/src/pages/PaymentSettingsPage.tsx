@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getPaymentConfig, savePaymentConfig, type PaymentConfig } from '../services/paymentConfigService';
-import { Zap, Check, AlertCircle, Eye, EyeOff, ExternalLink, CreditCard, ChevronDown, Globe } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle, Check, ChevronDown, CreditCard, ExternalLink, Eye, EyeOff, Globe, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { CURRENCIES } from '../lib/currency';
+import { getPaymentConfig, savePaymentConfig, type PaymentConfig } from '../services/paymentConfigService';
 
 const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/50 focus:ring-1 focus:ring-[#FE015C]/20 transition-all font-mono";
 
@@ -132,7 +132,7 @@ export default function PaymentSettingsPage() {
         </div>
         <p className="text-xs text-gray-600">
           {activeGateway === 'waymb'
-            ? 'Os overlays vão oferecer MB WAY, Multibanco e Bizum como opções de pagamento.'
+            ? 'Os overlays vão oferecer MB WAY e Multibanco como opções de pagamento.'
             : 'Os overlays vão gerar um QR Code PIX para pagamento.'}
         </p>
       </div>

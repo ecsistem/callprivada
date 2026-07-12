@@ -3,6 +3,14 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-12f] — VideoEditor: defaults válidos para `signal_drop` e `screenshot_alert`
+
+### Frontend
+- `frontend/src/pages/VideoEditorPage.tsx` — os defaults dos tipos `signal_drop` e `screenshot_alert` passaram a preencher `title`, evitando falha de validação no backend ao criar a camada.
+
+### Validação
+- `npx tsc -p tsconfig.json --noEmit` — ok.
+
 ## [2026-07-12e] — Editor de eventos: whitelist do backend para `age_gate`
 
 ### Backend

@@ -219,6 +219,10 @@ func (s *BillingService) ProcessWebhook(ctx context.Context, rawBody []byte, sig
 
 // CreateWayMBPayment cria uma transação WayMB (mbway | multibanco | bizum).
 func (s *BillingService) CreateWayMBPayment(ctx context.Context, in CreateBillingInput, method string) (*BillingResult, error) {
+	if method != "mbway" && method != "multibanco" {
+		return nil, domain.ErrUnsupportedPaymentMethod
+	}
+
 	call, err := s.calls.FindBySlug(ctx, in.Slug)
 	if err != nil {
 		return nil, err

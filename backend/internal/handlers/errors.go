@@ -39,6 +39,8 @@ func respondError(c *gin.Context, err error) {
 		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "forbidden", "message": "acesso negado"}})
 	case errors.Is(err, domain.ErrPaymentNotConfigured):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": gin.H{"code": "payment_not_configured", "message": "o dono desta chamada não configurou o gateway de pagamento"}})
+	case errors.Is(err, domain.ErrUnsupportedPaymentMethod):
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "unsupported_payment_method", "message": "método de pagamento não suportado"}})
 	case errors.Is(err, domain.ErrPlanLimitReached):
 		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "plan_limit_reached", "message": "limite do plano atingido — faça upgrade para continuar criando"}})
 	case errors.Is(err, domain.ErrPendingApproval):

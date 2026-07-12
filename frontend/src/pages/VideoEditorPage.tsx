@@ -1,20 +1,49 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  Play, Pause, SkipBack, ZoomIn, ZoomOut, Plus, Trash2,
-  ChevronLeft, Check, Scissors, Phone, MessageSquare,
-  Timer, TrendingUp, CreditCard, MousePointer, Volume2,
-  VolumeX, Layers, Eye, EyeOff, AlertCircle, WifiOff,
-  Camera, BatteryWarning, PhoneIncoming, Gift, Users,
-  Bell, Shield, Lock, PhoneOff,
+  AlertCircle,
+  BatteryWarning,
+  Bell,
+  Camera,
+  Check,
+  ChevronLeft,
+  CreditCard,
+  Eye, EyeOff,
+  Gift,
+  Layers,
+  Lock,
+  MessageSquare,
+  MousePointer,
+  Pause,
+  Phone,
+  PhoneIncoming,
+  PhoneOff,
+  Play,
+  Plus,
+  Scissors,
+  Shield,
+  SkipBack,
+  Timer,
+  Trash2,
+  TrendingUp,
+  Users,
+  Volume2,
+  VolumeX,
+  WifiOff,
+  ZoomIn, ZoomOut,
 } from 'lucide-react';
-import { getCall, getPublicCall, updateCall, type PublicCall, type Call } from '../services/callService';
-import {
-  listEvents, createEvent, updateEvent, deleteEvent,
-  type CallEvent, type UpsertEventPayload, type EventType,
-} from '../services/eventService';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { formatPrice } from '../lib/currency';
+import { getCall, getPublicCall, updateCall, type Call, type PublicCall } from '../services/callService';
+import {
+  createEvent,
+  deleteEvent,
+  listEvents,
+  updateEvent,
+  type CallEvent,
+  type EventType,
+  type UpsertEventPayload,
+} from '../services/eventService';
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
 
@@ -999,9 +1028,9 @@ function defaultPayload(type: string, currentTime: number): UpsertEventPayload {
     case 'offer_call': return { ...base, button_text: 'Entrar na chamada', button_color: '#f59e0b', duration_seconds: 30, offer_call_slug: '' };
     case 'countdown': return { ...base, button_text: 'Garantir agora', button_color: '#ef4444', duration_seconds: 300 };
     case 'upsell': return { ...base, button_text: 'Quero isso', button_color: '#ec4899', duration_seconds: 0 };
-    case 'signal_drop': return { ...base, title: '', description: '', duration_seconds: 5 };
+    case 'signal_drop': return { ...base, title: 'Sinal fraco', description: '', duration_seconds: 5 };
     case 'reconnect_paywall': return { ...base, billing_amount_cents: 3990, button_text: 'Restaurar chamada', button_color: '#25d366', description: 'Sua conexão foi interrompida. Para restaurar a chamada, é necessário continuar com o pacote de conexão.' };
-    case 'screenshot_alert': return { ...base, title: '', description: '', duration_seconds: 4 };
+    case 'screenshot_alert': return { ...base, title: 'Alerta de print', description: '', duration_seconds: 4 };
     case 'battery_low': return { ...base, title: '3', description: '', duration_seconds: 6 };
     case 'incoming_call': return { ...base, title: 'Contato desconhecido', description: '', duration_seconds: 8 };
     case 'fake_gift': return { ...base, title: 'Você enviou um presente! 🎁', description: '', duration_seconds: 4 };

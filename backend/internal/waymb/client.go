@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -75,12 +74,15 @@ func (u *UnixSeconds) UnmarshalJSON(data []byte) error {
 			*u = 0
 			return nil
 		}
-		numeric, err := strconv.ParseInt(text, 10, 64)
-		if err != nil {
-			return fmt.Errorf("waymb: invalid expiresAt %q: %w", text, err)
+		if parsed, err := time.Parse(time.RFC3339Nano, text); err == nil {
+			*u = UnixSeconds(parsed.Unix())
+			return nil
 		}
-		*u = UnixSeconds(numeric)
-		return nil
+		if parsed, err := time.Parse(time.RFC3339, text); err == nil {
+			*u = UnixSeconds(parsed.Unix())
+			return nil
+		}
+		return fmt.Errorf("waymb: invalid expiresAt %q", text)
 	}
 
 	return fmt.Errorf("waymb: invalid expiresAt payload: %s", string(data))

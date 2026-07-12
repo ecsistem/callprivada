@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createPixPayment, createWayMBPayment, checkPixStatus, checkWayMBStatus } from '../services/billingService';
+import { checkPixStatus, checkWayMBStatus, createPixPayment, createWayMBPayment } from '../services/billingService';
 import { getPaymentConfig } from '../services/paymentConfigService';
 
 export interface CreditPackage {
@@ -28,7 +28,7 @@ function fmtTime(seconds: number) {
 }
 
 type Mode = 'select' | 'payer' | 'method' | 'pix' | 'waymb' | 'active' | 'warning' | 'topup' | 'ended';
-type WayMBMethod = 'mbway' | 'multibanco' | 'bizum';
+type WayMBMethod = 'mbway' | 'multibanco';
 
 interface Props {
   slug: string;
@@ -360,7 +360,6 @@ export default function CreditsOverlay({
     const methods: { id: WayMBMethod; label: string; desc: string; icon: string }[] = [
       { id: 'mbway',      label: 'MB WAY',     desc: 'Aprovação no app MB WAY',            icon: '📱' },
       { id: 'multibanco', label: 'Multibanco', desc: 'Entidade + referência para ATM/home', icon: '🏧' },
-      { id: 'bizum',      label: 'Bizum',      desc: 'Aprovação no app Bizum',              icon: '⚡' },
     ];
     return (
       <FullscreenPanel>
@@ -399,7 +398,6 @@ export default function CreditsOverlay({
   // ── Aguardando pagamento WayMB ─────────────────────────────────────────
   if (mode === 'waymb') {
     const isMbway = waymbMethod === 'mbway';
-    const isBizum = waymbMethod === 'bizum';
     const isMultibanco = waymbMethod === 'multibanco';
     return (
       <FullscreenPanel>
@@ -408,14 +406,12 @@ export default function CreditsOverlay({
           <p className="text-gray-400 text-xs mt-0.5">{selected.label}</p>
         </div>
 
-        {(isMbway || isBizum) && (
+        {isMbway && (
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2 mb-4">
-            <div className="text-3xl">{isMbway ? '📱' : '⚡'}</div>
-            <p className="text-white font-semibold text-sm">
-              {isMbway ? 'Aprovação enviada para o MB WAY' : 'Aprovação enviada para o Bizum'}
-            </p>
+            <div className="text-3xl">📱</div>
+            <p className="text-white font-semibold text-sm">Aprovação enviada para o MB WAY</p>
             <p className="text-gray-500 text-xs leading-relaxed">
-              Abra o seu app {isMbway ? 'MB WAY' : 'Bizum'} e aprove o pagamento de {fmt(selected.price_cents)}.
+              Abra o seu app MB WAY e aprove o pagamento de {fmt(selected.price_cents)}.
             </p>
             <div className="flex items-center justify-center gap-1.5 pt-1">
               <div className="w-1.5 h-1.5 rounded-full bg-[#FE015C] animate-bounce" style={{ animationDelay: '0s' }} />
