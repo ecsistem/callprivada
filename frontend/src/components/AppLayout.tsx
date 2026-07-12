@@ -40,11 +40,11 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
       onClick={onClick}
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
         active
-          ? 'bg-green-500/15 text-green-400 border border-green-500/20'
+          ? 'bg-[#FE015C]/12 text-white border border-[#FE015C]/25'
           : 'text-gray-400 hover:text-white hover:bg-white/5'
       }`}
     >
-      <span className={active ? 'text-green-400' : 'text-gray-500'}>{item.icon}</span>
+      <span className={active ? 'text-[#FE015C]' : 'text-gray-500'}>{item.icon}</span>
       {item.label}
     </Link>
   );
@@ -94,7 +94,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* User */}
       <div className="px-3 py-4 border-t border-white/5">
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FE015C] to-[#FD267D] flex items-center justify-center text-white text-xs font-bold shrink-0">
             {getInitials(user?.name, user?.email)}
           </div>
           <div className="flex-1 min-w-0">

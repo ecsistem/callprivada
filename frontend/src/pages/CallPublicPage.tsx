@@ -13,6 +13,7 @@ import { EventOverlay } from '../components/EventOverlay';
 import CreditsOverlay from '../components/CreditsOverlay';
 import { trackVisit, updateWatched } from '../services/visitService';
 import { useTrackingScripts } from '../hooks/useTrackingScripts';
+import { formatPrice } from '../lib/currency';
 
 /* ─── Status bar fake (hora, sinal, bateria) ───────────────────────────── */
 
@@ -88,13 +89,14 @@ function FloatingReaction({ emoji, x }: { emoji: string; x: number }) {
 
 /* ─── Paywall de continuação ────────────────────────────────────────────── */
 
-function EntryPaywall({ displayName, photoUrl, priceCents, onPay }: {
+function EntryPaywall({ displayName, photoUrl, priceCents, currency = 'BRL', onPay }: {
   displayName: string;
   photoUrl?: string;
   priceCents: number;
+  currency?: string;
   onPay: () => void;
 }) {
-  const brl = (priceCents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const brl = formatPrice(priceCents, currency);
   return (
     <div
       className="fixed inset-0 flex flex-col"
@@ -485,6 +487,7 @@ function useCallTimer(running: boolean) {
 type State = 'loading' | 'ringing' | 'call' | 'error' | 'expired';
 
 const RING_DURATION_MS = 3000;
+const BILLING_TYPES = ['fake_billing', 'video_lock', 'phone_block', 'tip_jar', 'age_gate'];
 
 export default function CallPublicPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -759,12 +762,12 @@ export default function CallPublicPage() {
               if (slug) localStorage.setItem(`callprivada_paywall_${slug}`, '1');
               setPaywallBlocked(true);
             }
-            if (evt.type === 'fake_billing' || evt.type === 'video_lock' || evt.type === 'phone_block' || evt.type === 'tip_jar') {
+            if (evt.type === 'fake_billing' || evt.type === 'video_lock' || evt.type === 'phone_block' || evt.type === 'tip_jar' || evt.type === 'age_gate') {
               // persiste para restaurar em caso de refresh
               if (slug) localStorage.setItem(`callprivada_billing_${slug}`, evt.id);
               setPendingBillingId(evt.id);
             }
-            if (evt.type === 'video_lock' || evt.type === 'phone_block') {
+            if (evt.type === 'video_lock' || evt.type === 'phone_block' || evt.type === 'age_gate') {
               video.pause();
               setPlaying(false);
             }
@@ -778,17 +781,15 @@ export default function CallPublicPage() {
     return () => clearInterval(interval);
   }, [state]);
 
-  const BILLING_TYPES = ['fake_billing', 'video_lock', 'phone_block', 'tip_jar'];
-
-  function dismissEvent() {
+    const dismissEvent = useCallback(() => {
     if (activeEvent && BILLING_TYPES.includes(activeEvent.type)) {
       if (slug) localStorage.removeItem(`callprivada_billing_${slug}`);
       setPendingBillingId(null);
     }
     setActiveEvent(null);
-  }
+  }, [activeEvent, slug]);
 
-  function resumeVideo() {
+  const resumeVideo = useCallback(() => {
     if (slug) {
       localStorage.removeItem(`callprivada_paywall_${slug}`);
       localStorage.removeItem(`callprivada_billing_${slug}`);
@@ -799,7 +800,7 @@ export default function CallPublicPage() {
     if (videoRef.current && !videoRef.current.ended) {
       videoRef.current.play().then(() => setPlaying(true)).catch(() => {});
     }
-  }
+  }, [slug]);
 
 
   /* Câmera própria */
@@ -908,6 +909,7 @@ export default function CallPublicPage() {
         displayName={call.display_name}
         photoUrl={call.contact_photo_url}
         priceCents={call.entry_price_cents}
+        currency={call.currency}
         onPay={() => {
           if (slug) localStorage.setItem(`callprivada_paid_${slug}`, '1');
           setPaymentDone(true);
@@ -1143,7 +1145,8 @@ export default function CallPublicPage() {
         <EventOverlay
           event={activeEvent}
           onDismiss={dismissEvent}
-          onResume={['reconnect_paywall', 'fake_billing', 'video_lock', 'phone_block', 'tip_jar'].includes(activeEvent.type) ? resumeVideo : undefined}
+          onResume={['reconnect_paywall', 'fake_billing', 'video_lock', 'phone_block', 'tip_jar', 'age_gate'].includes(activeEvent.type) ? resumeVideo : undefined}
+          currency={call.currency}
         />
       )}
 

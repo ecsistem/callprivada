@@ -21,6 +21,29 @@ func NewVideoService(videos domain.VideoRepository, store storage.FileStorage) *
 	return &VideoService{videos: videos, storage: store}
 }
 
+// CheckCreateLimit verifica se o usuário atingiu o limite de vídeos do plano.
+func (s *VideoService) CheckCreateLimit(ctx context.Context, userID uuid.UUID, subSvc *SubscriptionService) error {
+	if subSvc == nil {
+		return nil
+	}
+	sub, err := subSvc.GetMySubscription(ctx, userID)
+	if err != nil || sub == nil {
+		return nil
+	}
+	plan, err := subSvc.GetPlan(ctx, sub.PlanID)
+	if err != nil || plan == nil || plan.MaxVideos == 0 {
+		return nil
+	}
+	count, err := s.videos.CountByUserID(ctx, userID)
+	if err != nil {
+		return nil
+	}
+	if count >= int64(plan.MaxVideos) {
+		return domain.ErrPlanLimitReached
+	}
+	return nil
+}
+
 // Upload valida MIME real (magic bytes), faz upload para S3/MinIO e cria o registro.
 // O body deve ser o io.Reader do multipart file.
 func (s *VideoService) Upload(ctx context.Context, userID uuid.UUID, filename string, size int64, body io.Reader) (*domain.Video, error) {

@@ -20,17 +20,39 @@ func NewPaymentConfigService(configs domain.PaymentConfigRepository) *PaymentCon
 func (s *PaymentConfigService) Get(ctx context.Context, userID uuid.UUID) (*domain.UserPaymentConfig, error) {
 	cfg, err := s.configs.FindByUserID(ctx, userID)
 	if errors.Is(err, domain.ErrNotFound) {
-		// Retorna config vazia (sem erro) se ainda não configurado.
-		return &domain.UserPaymentConfig{UserID: userID}, nil
+		return &domain.UserPaymentConfig{UserID: userID, ActiveGateway: "zuckpay"}, nil
 	}
 	return cfg, err
 }
 
-func (s *PaymentConfigService) Save(ctx context.Context, userID uuid.UUID, clientID, clientSecret string) (*domain.UserPaymentConfig, error) {
+type SavePaymentConfigInput struct {
+	ZuckPayClientID     string
+	ZuckPayClientSecret string
+	WayMBClientID       string
+	WayMBClientSecret   string
+	WayMBAccountEmail   string
+	ActiveGateway       string
+	Currency            string
+}
+
+func (s *PaymentConfigService) Save(ctx context.Context, userID uuid.UUID, in SavePaymentConfigInput) (*domain.UserPaymentConfig, error) {
+	gw := in.ActiveGateway
+	if gw == "" {
+		gw = "zuckpay"
+	}
+	cur := in.Currency
+	if cur == "" {
+		cur = "BRL"
+	}
 	cfg := &domain.UserPaymentConfig{
 		UserID:              userID,
-		ZuckPayClientID:     clientID,
-		ZuckPayClientSecret: clientSecret,
+		ZuckPayClientID:     in.ZuckPayClientID,
+		ZuckPayClientSecret: in.ZuckPayClientSecret,
+		WayMBClientID:       in.WayMBClientID,
+		WayMBClientSecret:   in.WayMBClientSecret,
+		WayMBAccountEmail:   in.WayMBAccountEmail,
+		ActiveGateway:       gw,
+		Currency:            cur,
 	}
 	if err := s.configs.Upsert(ctx, cfg); err != nil {
 		return nil, err

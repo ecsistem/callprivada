@@ -80,6 +80,10 @@ func (s *AdminService) ListSubscriptions(ctx context.Context, page, perPage int)
 	return s.subs.FindAll(page, perPage)
 }
 
+func (s *AdminService) ListSubscriptionsWithEmail(ctx context.Context, page, perPage int) ([]*domain.SubscriptionWithEmail, int64, error) {
+	return s.subs.FindAllWithEmail(page, perPage)
+}
+
 func (s *AdminService) CancelSubscription(ctx context.Context, adminID, subID uuid.UUID) error {
 	sub, err := s.subs.FindByID(subID)
 	if err != nil {
@@ -161,4 +165,36 @@ func (s *AdminService) log(ctx context.Context, adminID uuid.UUID, action, targe
 		TargetID: targetID,
 		Detail:   detail,
 	})
+}
+
+// ImpersonateUser gera um access token de curta duração (1h) para o usuário indicado.
+// Permite que o admin acesse o dashboard de outro usuário para suporte.
+func (s *AdminService) ImpersonateUser(ctx context.Context, adminID, targetUserID uuid.UUID, jwt *JWTService) (string, error) {
+	user, err := s.users.FindByID(ctx, targetUserID)
+	if err != nil {
+		return "", err
+	}
+	token, _, err := jwt.GenerateAccessToken(user.ID, user.Role)
+	if err != nil {
+		return "", err
+	}
+	_ = s.log(ctx, adminID, "impersonate", "user", &targetUserID, "admin dashboard access")
+	return token, nil
+}
+
+// ChangeUserPassword altera a senha de um usuário (ação de suporte pelo admin).
+func (s *AdminService) ChangeUserPassword(ctx context.Context, adminID, targetUserID uuid.UUID, newPassword string) error {
+	user, err := s.users.FindByID(ctx, targetUserID)
+	if err != nil {
+		return err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = string(hash)
+	if err := s.users.Update(ctx, user); err != nil {
+		return err
+	}
+	return s.log(ctx, adminID, "change_password", "user", &targetUserID, "admin support action")
 }

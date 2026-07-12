@@ -13,10 +13,11 @@ import (
 
 type AdminHandler struct {
 	admin *services.AdminService
+	jwt   *services.JWTService
 }
 
-func NewAdminHandler(admin *services.AdminService) *AdminHandler {
-	return &AdminHandler{admin: admin}
+func NewAdminHandler(admin *services.AdminService, jwt *services.JWTService) *AdminHandler {
+	return &AdminHandler{admin: admin, jwt: jwt}
 }
 
 func parsePage(c *gin.Context) (int, int) {
@@ -101,7 +102,7 @@ func (h *AdminHandler) DeleteUser(c *gin.Context) {
 // GET /admin/subscriptions
 func (h *AdminHandler) ListSubscriptions(c *gin.Context) {
 	page, perPage := parsePage(c)
-	subs, total, err := h.admin.ListSubscriptions(c.Request.Context(), page, perPage)
+	subs, total, err := h.admin.ListSubscriptionsWithEmail(c.Request.Context(), page, perPage)
 	if err != nil {
 		respondError(c, err)
 		return
@@ -204,6 +205,44 @@ func (h *AdminHandler) AssignPlan(c *gin.Context) {
 		return
 	}
 	if err := h.admin.AssignPlan(c.Request.Context(), adminID, userID, planID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// POST /admin/users/:id/impersonate
+func (h *AdminHandler) ImpersonateUser(c *gin.Context) {
+	adminID := c.MustGet(middlewares.ContextUserIDKey).(uuid.UUID)
+	targetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "id inválido"}})
+		return
+	}
+	token, err := h.admin.ImpersonateUser(c.Request.Context(), adminID, targetID, h.jwt)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"access_token": token})
+}
+
+// PUT /admin/users/:id/password
+func (h *AdminHandler) ChangeUserPassword(c *gin.Context) {
+	adminID := c.MustGet(middlewares.ContextUserIDKey).(uuid.UUID)
+	targetID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "id inválido"}})
+		return
+	}
+	var req struct {
+		Password string `json:"password" binding:"required,min=6"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
+		return
+	}
+	if err := h.admin.ChangeUserPassword(c.Request.Context(), adminID, targetID, req.Password); err != nil {
 		respondError(c, err)
 		return
 	}

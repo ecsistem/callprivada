@@ -34,6 +34,7 @@ const TYPE_META: Record<EventType, { label: string; color: string; bg: string; b
   tip_jar:           { label: 'Cofrinho / Gorjeta', color: 'text-pink-400',   bg: 'bg-pink-500/10',   border: 'border-pink-500/25',   emoji: '💝' },
   video_lock:        { label: 'Vídeo bloqueado',    color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'border-indigo-500/25', emoji: '🔒' },
   phone_block:       { label: 'Número bloqueado',   color: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/25',    emoji: '🚫' },
+  age_gate:          { label: 'Verificação +18',    color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/25', emoji: '🔞' },
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -176,6 +177,81 @@ function PhonePreview({ event, displayName, callSlug }: {
                       <p className="text-[7px] text-[#25d366] font-semibold">WhatsApp</p>
                       <p className="text-[8px] text-white">{title || 'digitando…'}</p>
                     </div>
+                  </div>
+                </div>
+              )}
+              {/* Battery low */}
+              {type === 'battery_low' && (
+                <div className="absolute top-2 left-2 right-2">
+                  <div className="bg-[#1f2c34] border border-orange-500/40 rounded-xl px-2 py-1.5 flex items-center gap-1.5">
+                    <span className="text-[10px]">🔋</span>
+                    <p className="text-[8px] text-orange-400 font-bold">Bateria fraca — {title || '3'}%</p>
+                  </div>
+                </div>
+              )}
+              {/* Screenshot alert */}
+              {type === 'screenshot_alert' && (
+                <div className="absolute inset-0 bg-red-900/90 flex flex-col items-center justify-center gap-1">
+                  <span className="text-[14px]">📸</span>
+                  <p className="text-[8px] font-black text-white text-center px-1">{title || '⚠️ Atenção!'}</p>
+                  {desc && <p className="text-[7px] text-red-200 text-center px-1 line-clamp-2">{desc}</p>}
+                </div>
+              )}
+              {/* Incoming call */}
+              {type === 'incoming_call' && (
+                <div className="absolute inset-0 bg-[#111b21]/95 flex flex-col items-center justify-center gap-1">
+                  <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-[10px] text-white">👤</div>
+                  <p className="text-[8px] font-bold text-white">{title || 'Contato desconhecido'}</p>
+                  <p className="text-[7px] text-[#25d366]">Ligação de WhatsApp</p>
+                </div>
+              )}
+              {/* Social proof */}
+              {type === 'social_proof' && (
+                <div className="absolute top-16 left-1 right-1">
+                  <div className="bg-purple-700/95 rounded-xl px-2 py-1.5 flex items-center gap-1.5">
+                    <span className="text-[10px]">🔔</span>
+                    <p className="text-[8px] text-white font-semibold line-clamp-1">{title || 'João pagou R$ 49'}</p>
+                  </div>
+                </div>
+              )}
+              {/* Viewer count */}
+              {type === 'viewer_count' && (
+                <div className="absolute top-16 left-0 right-0 flex justify-center">
+                  <div className="bg-cyan-600/90 rounded-full px-2 py-1 flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    <span className="text-[8px] text-white font-bold">{title || '847'} ao vivo</span>
+                  </div>
+                </div>
+              )}
+              {/* Fake gift */}
+              {type === 'fake_gift' && (
+                <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-1">
+                  <span className="text-[24px]">🎁</span>
+                  <p className="text-[8px] font-bold text-white text-center px-2">{title || 'Presente enviado!'}</p>
+                </div>
+              )}
+              {/* Video lock / phone block / age gate / tip_jar */}
+              {(type === 'video_lock' || type === 'phone_block' || type === 'age_gate' || type === 'tip_jar') && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2"
+                  style={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.75)' }}>
+                  <span className="text-[18px]">
+                    {type === 'video_lock' ? '🔒' : type === 'phone_block' ? '🚫' : type === 'age_gate' ? '🔞' : '💝'}
+                  </span>
+                  <p className="text-[8px] font-bold text-white text-center">{title || TYPE_META[type]?.label}</p>
+                  {desc && <p className="text-[7px] text-gray-300 text-center line-clamp-2">{desc}</p>}
+                  <div className="w-full mt-1 text-center text-[7px] font-semibold py-0.5 rounded-lg text-white"
+                    style={{ backgroundColor: btnColor }}>
+                    {btnText}
+                  </div>
+                </div>
+              )}
+              {/* Exclusive access */}
+              {type === 'exclusive_access' && (
+                <div className="absolute inset-0 bg-amber-900/90 flex flex-col items-center justify-center gap-1 px-2">
+                  <span className="text-[14px]">🛡️</span>
+                  <p className="text-[8px] font-bold text-white text-center">{title || 'Acesso encerrando'}</p>
+                  <div className="bg-amber-500 rounded-lg px-3 py-1 mt-0.5">
+                    <p className="text-white text-[10px] font-black">00:00</p>
                   </div>
                 </div>
               )}
@@ -343,7 +419,7 @@ export default function TimelineEditorPage() {
   // Para a barra de timeline: pegar duração do vídeo se disponível (call não tem isso, usa 300s como base)
   const timelineMax = Math.max(300, ...events.map(e => e.trigger_at_seconds + (e.duration_seconds || 10)));
 
-  const inputCls = 'w-full bg-[#0f0f0f] border border-white/8 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500/50 transition-colors placeholder:text-gray-600';
+  const inputCls = 'w-full bg-[#0f0f0f] border border-white/8 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#FE015C]/50 transition-colors placeholder:text-gray-600';
 
   return (
     <div className="min-h-screen bg-[#120208] text-white">
@@ -363,7 +439,7 @@ export default function TimelineEditorPage() {
             </div>
           </div>
           <button onClick={openCreate}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-lg shadow-green-900/20">
+            className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-lg shadow-[#FE015C]/20">
             <Plus size={15} />Novo evento
           </button>
         </div>
@@ -435,15 +511,34 @@ export default function TimelineEditorPage() {
                       <select value={form.type}
                         onChange={e => setForm(f => ({ ...f, type: e.target.value as EventType }))}
                         className={inputCls}>
-                        <option value="popup">💬 Popup</option>
-                        <option value="fullscreen">🖥️ Tela cheia</option>
-                        <option value="fake_billing">💳 Cobrança</option>
-                        <option value="offer_call">📞 Oferta de chamada</option>
-                        <option value="countdown">⏳ Contagem regressiva</option>
-                        <option value="upsell">🚀 Upsell</option>
-                        <option value="reconnect_paywall">🔴 Internet caiu (paywall)</option>
-                        <option value="signal_drop">📶 Sinal fraco</option>
-                        <option value="fake_typing">⌨️ WhatsApp digitando</option>
+                        <optgroup label="📢 Mensagens">
+                          <option value="popup">💬 Popup</option>
+                          <option value="fullscreen">🖥️ Tela cheia</option>
+                          <option value="fake_typing">⌨️ WhatsApp digitando</option>
+                          <option value="social_proof">🔔 Prova social</option>
+                          <option value="viewer_count">👥 Espectadores ao vivo</option>
+                          <option value="fake_gift">🎁 Presente enviado</option>
+                          <option value="incoming_call">📱 Chamada entrando</option>
+                        </optgroup>
+                        <optgroup label="⚡ Urgência / Escassez">
+                          <option value="countdown">⏳ Contagem regressiva</option>
+                          <option value="exclusive_access">🛡️ Acesso exclusivo encerrando</option>
+                          <option value="signal_drop">📶 Sinal fraco</option>
+                          <option value="battery_low">🔋 Bateria fraca</option>
+                          <option value="screenshot_alert">📸 Alerta de print</option>
+                        </optgroup>
+                        <optgroup label="💰 Monetização">
+                          <option value="fake_billing">💳 Cobrança PIX</option>
+                          <option value="tip_jar">💝 Cofrinho / Gorjeta</option>
+                          <option value="video_lock">🔒 Vídeo bloqueado</option>
+                          <option value="phone_block">🚫 Número bloqueado</option>
+                          <option value="age_gate">🔞 Verificação +18</option>
+                          <option value="reconnect_paywall">🔴 Internet caiu (paywall)</option>
+                        </optgroup>
+                        <optgroup label="🔗 Redirecionamento">
+                          <option value="offer_call">📞 Oferta de chamada</option>
+                          <option value="upsell">🚀 Upsell</option>
+                        </optgroup>
                       </select>
                     </div>
                     <div>
@@ -481,14 +576,159 @@ export default function TimelineEditorPage() {
                     </div>
                   </div>
 
-                  {/* ── fake_typing: só precisa do título (a mensagem da notificação) ── */}
+                  {/* ── fake_typing ── */}
                   {form.type === 'fake_typing' && (
-                    <div className="bg-green-500/5 border border-green-500/15 rounded-xl px-3 py-2.5 text-xs text-green-400 space-y-1">
-                      <p className="font-semibold">⌨️ Como funciona</p>
+                    <div className="bg-[#FE015C]/5 border border-[#FE015C]/15 rounded-xl px-3 py-2.5 text-xs space-y-1">
+                      <p className="font-semibold text-[#FE015C]">⌨️ Como funciona</p>
                       <p className="text-gray-500 leading-relaxed">
-                        Aparece uma bolha de notificação do WhatsApp no topo da tela com o texto do <strong className="text-gray-400">Título</strong> acima.
-                        Desaparece automaticamente após alguns segundos (configure a <strong className="text-gray-400">Duração</strong>).
+                        Bolha de notificação no topo com o texto do <strong className="text-gray-400">Título</strong>.
+                        Use <strong className="text-gray-400">Duração</strong> para controlar quanto tempo fica visível.
                       </p>
+                    </div>
+                  )}
+
+                  {/* ── screenshot_alert ── */}
+                  {form.type === 'screenshot_alert' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Título do alerta</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="ex: ⚠️ Atenção!"
+                          className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Mensagem principal</label>
+                        <textarea rows={2} value={form.description}
+                          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder="ex: Ela viu que você tentou tirar print!"
+                          className={inputCls + ' resize-none'} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Linha secundária (opcional)</label>
+                        <input value={form.button_text ?? ''}
+                          onChange={e => setForm(f => ({ ...f, button_text: e.target.value }))}
+                          placeholder="ex: Isso pode encerrar a chamada imediatamente."
+                          className={inputCls} />
+                      </div>
+                      <div className="bg-red-500/5 border border-red-500/15 rounded-xl px-3 py-2.5 text-xs text-red-400 space-y-1">
+                        <p className="font-semibold">📸 Como funciona</p>
+                        <p className="text-gray-500">Aparece um alerta de fundo vermelho simulando detecção de screenshot. Some sozinho após a Duração configurada.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── battery_low ── */}
+                  {form.type === 'battery_low' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Porcentagem da bateria (número)</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="ex: 3"
+                          className={inputCls} />
+                        <p className="text-[10px] text-gray-600 mt-1">Coloque um número de 1 a 20. Aparece como "Bateria fraca — X%"</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Mensagem de aviso</label>
+                        <input value={form.description}
+                          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder="ex: A chamada pode cair a qualquer momento"
+                          className={inputCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── incoming_call ── */}
+                  {form.type === 'incoming_call' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Nome do chamador</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="ex: Mamãe 💛"
+                          className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Texto secundário (opcional)</label>
+                        <input value={form.description}
+                          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder="ex: Ligação de emergência"
+                          className={inputCls} />
+                      </div>
+                      <div className="bg-green-500/5 border border-green-500/15 rounded-xl px-3 py-2.5 text-xs text-gray-500">
+                        Simula uma chamada de WhatsApp entrando. O visitante pode "atender" ou "recusar" — ambos fecham o overlay.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── fake_gift ── */}
+                  {form.type === 'fake_gift' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Mensagem do presente</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="ex: Você ganhou um presente! 🎁"
+                          className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Subtexto (opcional)</label>
+                        <input value={form.description}
+                          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder="ex: Clique para resgatar"
+                          className={inputCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── viewer_count ── */}
+                  {form.type === 'viewer_count' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Número base de espectadores</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="ex: 847"
+                          className={inputCls} />
+                        <p className="text-[10px] text-gray-600 mt-1">Exibe um contador crescente partindo deste número. Desaparece após a Duração.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── social_proof ── */}
+                  {form.type === 'social_proof' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Mensagem de prova social</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="ex: João acabou de pagar R$ 49"
+                          className={inputCls} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── exclusive_access ── */}
+                  {form.type === 'exclusive_access' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Título do acesso exclusivo</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder="ex: Acesso exclusivo encerrando"
+                          className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Descrição</label>
+                        <textarea rows={2} value={form.description}
+                          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder="ex: Sua vaga está reservada por tempo limitado"
+                          className={inputCls + ' resize-none'} />
+                      </div>
+                      <div className="bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2.5 text-xs text-gray-500">
+                        Mostra tela cheia com um countdown regressivo. Use a <strong className="text-gray-400">Duração</strong> como tempo do countdown (segundos).
+                      </div>
                     </div>
                   )}
 
@@ -547,7 +787,10 @@ export default function TimelineEditorPage() {
                   )}
 
                   {/* Descrição + Botão — tipos genéricos */}
-                  {!['signal_drop', 'fake_typing', 'reconnect_paywall'].includes(form.type) && (
+                  {!['signal_drop', 'fake_typing', 'reconnect_paywall',
+                      'screenshot_alert', 'battery_low', 'incoming_call', 'fake_gift',
+                      'viewer_count', 'social_proof', 'exclusive_access',
+                      'tip_jar', 'video_lock', 'phone_block', 'age_gate'].includes(form.type) && (
                     <>
                       <div>
                         <label className="block text-xs text-gray-500 mb-1.5">Descrição</label>
@@ -594,7 +837,7 @@ export default function TimelineEditorPage() {
                       </div>
                       <label className="flex items-center gap-3 cursor-pointer">
                         <div onClick={() => setForm(f => ({ ...f, billing_collect_payer_info: !f.billing_collect_payer_info }))}
-                          className={`relative w-9 h-5 rounded-full transition-colors ${form.billing_collect_payer_info ? 'bg-green-500' : 'bg-gray-700'}`}>
+                          className={`relative w-9 h-5 rounded-full transition-colors ${form.billing_collect_payer_info ? 'bg-[#FE015C]' : 'bg-gray-700'}`}>
                           <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.billing_collect_payer_info ? 'translate-x-4' : 'translate-x-0.5'}`} />
                         </div>
                         <span className="text-xs text-gray-400">Coletar nome, CPF e e-mail</span>
@@ -617,7 +860,7 @@ export default function TimelineEditorPage() {
                     <div className="border-t border-white/5 pt-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="text-xs text-gray-500">Página de upsell</label>
-                        <Link to="/upsell/new" target="_blank" className="text-[10px] text-green-400 hover:text-green-300 font-medium transition-colors">+ Criar upsell →</Link>
+                        <Link to="/upsell/new" target="_blank" className="text-[10px] text-[#FE015C] hover:text-[#FD267D] font-medium transition-colors">+ Criar upsell →</Link>
                       </div>
                       {upsells.length === 0 ? (
                         <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-3 py-2.5 text-xs text-yellow-400">
@@ -636,6 +879,74 @@ export default function TimelineEditorPage() {
                     </div>
                   )}
 
+                  {/* ── tip_jar / video_lock / phone_block / age_gate: billing + textos ── */}
+                  {(['tip_jar', 'video_lock', 'phone_block', 'age_gate'] as const).includes(form.type as never) && (
+                    <div className="space-y-3 border-t border-white/5 pt-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Título</label>
+                        <input value={form.title}
+                          onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                          placeholder={
+                            form.type === 'tip_jar' ? 'ex: Manda um presente pra ela!' :
+                            form.type === 'video_lock' ? 'ex: Vídeo bloqueado' :
+                            form.type === 'phone_block' ? 'ex: Número bloqueado' :
+                            'ex: Conteúdo +18'
+                          }
+                          className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">Descrição</label>
+                        <textarea rows={2} value={form.description}
+                          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                          placeholder={
+                            form.type === 'tip_jar' ? 'ex: Escolha um valor e surpreenda ela' :
+                            form.type === 'video_lock' ? 'ex: Continue para desbloquear o momento' :
+                            form.type === 'phone_block' ? 'ex: Seu número foi bloqueado temporariamente. Pague para liberar.' :
+                            'ex: Para confirmar que você é maior de idade, é necessário uma verificação rápida.'
+                          }
+                          className={inputCls + ' resize-none'} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1.5">Texto do botão</label>
+                          <input value={form.button_text ?? ''}
+                            onChange={e => setForm(f => ({ ...f, button_text: e.target.value }))}
+                            placeholder={
+                              form.type === 'tip_jar' ? 'Enviar presente' :
+                              form.type === 'video_lock' ? 'Desbloquear' :
+                              form.type === 'phone_block' ? 'Liberar número' :
+                              'Confirmar maioridade'
+                            }
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1.5">Cor do botão</label>
+                          <div className="flex items-center gap-2">
+                            <input type="color" value={form.button_color ?? '#25d366'}
+                              onChange={e => setForm(f => ({ ...f, button_color: e.target.value }))}
+                              className="w-9 h-9 rounded-lg cursor-pointer bg-transparent border-0 p-0" />
+                            <input value={form.button_color ?? '#25d366'}
+                              onChange={e => setForm(f => ({ ...f, button_color: e.target.value }))}
+                              maxLength={7} className={inputCls + ' flex-1 font-mono'} />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1.5">
+                          {form.type === 'tip_jar' ? 'Valor base do presente (R$)' : 'Valor da cobrança (R$)'}
+                        </label>
+                        <input type="number" min={0} step={0.01}
+                          value={(form.billing_amount_cents ?? 0) / 100}
+                          onChange={e => setForm(f => ({ ...f, billing_amount_cents: Math.round(Number(e.target.value) * 100) }))}
+                          placeholder="0,00"
+                          className={inputCls} />
+                        {form.type === 'tip_jar' && (
+                          <p className="text-[10px] text-gray-600 mt-1">O cofrinho mostra opções de 1×, 2×, 5× e 10× este valor.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Campos específicos: offer_call */}
                   {form.type === 'offer_call' && (
                     <div className="border-t border-white/5 pt-3">
@@ -650,7 +961,7 @@ export default function TimelineEditorPage() {
                   )}
 
                   <button type="submit" disabled={isPending}
-                    className="w-full bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-xl py-2.5 text-sm transition-all">
+                    className="w-full bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white font-semibold rounded-xl py-2.5 text-sm transition-all">
                     {isPending ? 'Salvando…' : editing ? 'Atualizar evento' : 'Criar evento'}
                   </button>
                 </form>

@@ -15,12 +15,12 @@ import {
   Palette, Type, Phone, ExternalLink, Plus, Trash2,
 } from 'lucide-react';
 
-const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/60 focus:ring-1 focus:ring-[#FE015C]/20 transition-all";
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!value)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${value ? 'bg-green-500' : 'bg-white/10'}`}>
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${value ? 'bg-[#FE015C]' : 'bg-white/10'}`}>
       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
@@ -289,7 +289,7 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
         <button
           onClick={handleSubmit}
           disabled={mut.isPending}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-green-900/30"
+          className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-[#FE015C]/20"
         >
           {mut.isPending ? (
             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -344,21 +344,21 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
                     onClick={() => applyTemplate(t.slug)}
                     className={`w-full flex items-start gap-4 p-4 rounded-2xl border text-left transition-all ${
                       templateSlug === t.slug
-                        ? 'bg-green-500/5 border-green-500/30'
+                        ? 'bg-[#FE015C]/5 border-[#FE015C]/30'
                         : 'bg-[#18181b] border-white/5 hover:border-white/10'
                     }`}
                   >
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      templateSlug === t.slug ? 'bg-green-500/15' : 'bg-white/5'
+                      templateSlug === t.slug ? 'bg-[#FE015C]/15' : 'bg-white/5'
                     }`}>
-                      <LayoutTemplate size={16} className={templateSlug === t.slug ? 'text-green-400' : 'text-gray-500'} />
+                      <LayoutTemplate size={16} className={templateSlug === t.slug ? 'text-[#FE015C]' : 'text-gray-500'} />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-white">{t.label}</p>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{t.description}</p>
                     </div>
                     {templateSlug === t.slug && (
-                      <Check size={15} className="text-green-400 shrink-0 mt-0.5" />
+                      <Check size={15} className="text-[#FE015C] shrink-0 mt-0.5" />
                     )}
                   </button>
                 ))}
@@ -462,6 +462,53 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
                     rows={2} placeholder="ex: Tenho algo especial para te mostrar."
                     className={inputCls + ' resize-none'} />
                 </div>
+
+                {/* Downsell — bloco de preço */}
+                {isDownsell && (
+                  <div className="bg-[#18181b] border border-red-500/20 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-red-500/15 flex items-center justify-center">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" className="w-4 h-4">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-white">Bloco de preço / desconto</p>
+                        <p className="text-[10px] text-gray-500">Aparece antes do botão CTA com preço riscado + oferta</p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-400">Preço original (riscado)</label>
+                        <input
+                          value={config.original_price_label ?? ''}
+                          onChange={e => setField('original_price_label', e.target.value)}
+                          placeholder="ex: R$ 497"
+                          className={inputCls}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-400">Preço com desconto</label>
+                        <input
+                          value={config.discounted_price_label ?? ''}
+                          onChange={e => setField('discounted_price_label', e.target.value)}
+                          placeholder="ex: R$ 197"
+                          className={inputCls}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-gray-400">Badge de desconto</label>
+                        <input
+                          value={config.discount_badge ?? ''}
+                          onChange={e => setField('discount_badge', e.target.value)}
+                          placeholder="ex: 60% OFF — só hoje"
+                          className={inputCls}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-600">Deixe em branco para ocultar o bloco de preço</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Slots */}
                 <div className="bg-[#18181b] border border-white/5 rounded-2xl p-4 space-y-3">

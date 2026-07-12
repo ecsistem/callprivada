@@ -14,10 +14,11 @@ import (
 
 type VideoHandler struct {
 	videos *services.VideoService
+	subs   *services.SubscriptionService
 }
 
-func NewVideoHandler(videos *services.VideoService) *VideoHandler {
-	return &VideoHandler{videos: videos}
+func NewVideoHandler(videos *services.VideoService, subs *services.SubscriptionService) *VideoHandler {
+	return &VideoHandler{videos: videos, subs: subs}
 }
 
 func (h *VideoHandler) Upload(c *gin.Context) {
@@ -27,6 +28,11 @@ func (h *VideoHandler) Upload(c *gin.Context) {
 		return
 	}
 	uid := userID.(uuid.UUID)
+
+	if err := h.videos.CheckCreateLimit(c.Request.Context(), uid, h.subs); err != nil {
+		respondError(c, err)
+		return
+	}
 
 	file, header, err := c.Request.FormFile("video")
 	if err != nil {

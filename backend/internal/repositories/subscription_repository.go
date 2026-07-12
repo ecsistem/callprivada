@@ -87,6 +87,35 @@ func (r *subscriptionRepository) FindAll(page, perPage int) ([]*domain.Subscript
 	return out, total, nil
 }
 
+func (r *subscriptionRepository) FindAllWithEmail(page, perPage int) ([]*domain.SubscriptionWithEmail, int64, error) {
+	var total int64
+	if err := r.db.Model(&models.Subscription{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	offset := (page - 1) * perPage
+
+	type row struct {
+		models.Subscription
+		UserEmail string
+		UserName  string
+	}
+	var rows []row
+	if err := r.db.Table("subscriptions s").
+		Select("s.*, u.email as user_email, u.name as user_name").
+		Joins("JOIN users u ON u.id = s.user_id").
+		Order("s.created_at DESC").
+		Offset(offset).Limit(perPage).
+		Scan(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	out := make([]*domain.SubscriptionWithEmail, len(rows))
+	for i, r := range rows {
+		s := r.Subscription.ToDomain()
+		out[i] = &domain.SubscriptionWithEmail{Subscription: s, UserEmail: r.UserEmail, UserName: r.UserName}
+	}
+	return out, total, nil
+}
+
 func (r *subscriptionRepository) CountActive() (int64, error) {
 	var count int64
 	err := r.db.Model(&models.Subscription{}).Where("status = ?", domain.SubscriptionStatusActive).Count(&count).Error

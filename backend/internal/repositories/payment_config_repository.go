@@ -35,6 +35,11 @@ func (r *paymentConfigRepository) Upsert(ctx context.Context, cfg *domain.UserPa
 	return r.db.WithContext(ctx).Model(&existing).Updates(map[string]interface{}{
 		"zuckpay_client_id":     cfg.ZuckPayClientID,
 		"zuckpay_client_secret": cfg.ZuckPayClientSecret,
+		"waymb_client_id":       cfg.WayMBClientID,
+		"waymb_client_secret":   cfg.WayMBClientSecret,
+		"waymb_account_email":   cfg.WayMBAccountEmail,
+		"active_gateway":        cfg.ActiveGateway,
+		"currency":              cfg.Currency,
 	}).Error
 }
 

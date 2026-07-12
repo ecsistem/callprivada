@@ -143,12 +143,14 @@ function VideoCard({ video, selected, onSelect }: { video: Video; selected: bool
           : 'bg-[#1c0510] border-white/5 hover:border-white/15 hover:bg-white/[0.03]'
       }`}
     >
-      {/* Video thumbnail */}
-      <VideoThumbnail
-        videoId={video.id}
-        className="w-20 h-14 shrink-0"
-        playInline={false}
-      />
+      {/* Video thumbnail — stopPropagation so click-to-play doesn't trigger card select */}
+      <div onClick={e => e.stopPropagation()} className="shrink-0">
+        <VideoThumbnail
+          videoId={video.id}
+          className="w-20 h-14"
+          playInline={true}
+        />
+      </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">

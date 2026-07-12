@@ -3,18 +3,23 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getAdminStats, listAdminUsers, listAdminSubscriptions, listAdminCalls,
   listAuditLogs, blockUser, unblockUser, deleteAdminUser,
-  cancelAdminSubscription, deleteAdminCall,
+  cancelAdminSubscription, deleteAdminCall, deleteAdminPlan,
+  impersonateUser, changeUserPassword,
 } from '../services/adminService';
+import { useAuthStore } from '../stores/authStore';
+import { useNavigate } from 'react-router-dom';
 import { type Plan } from '../services/subscriptionService';
 import api from '../services/api';
 import {
   Users, CreditCard, Phone, Eye, ScrollText, ChevronLeft, ChevronRight,
   Search, Shield, AlertCircle, InboxIcon, Settings, Plus, X, Check,
+  LogIn, Key, Trash2,
 } from 'lucide-react';
+import { formatPrice } from '../lib/currency';
 
 type Tab = 'stats' | 'users' | 'subscriptions' | 'calls' | 'logs' | 'plans';
 
-const inputCls = "bg-[#1c0510] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "bg-[#1c0510] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/60 focus:ring-1 focus:ring-[#FE015C]/20 transition-all";
 
 function Stat({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | undefined; color: string }) {
   return (
@@ -176,6 +181,11 @@ function PlansTab() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-plans'] }); setEditingId(null); },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteAdminPlan(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-plans'] }),
+  });
+
   const startEdit = (p: Plan) => {
     setEditingId(p.id);
     setEditForm({
@@ -193,7 +203,7 @@ function PlansTab() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">Gerencie os planos pagos da plataforma. Não há plano gratuito.</p>
         <button onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 text-xs bg-green-600 hover:bg-green-500 text-white px-3 py-2 rounded-xl font-semibold transition-all">
+          className="flex items-center gap-1.5 text-xs bg-[#FE015C] hover:bg-[#FD267D] text-white px-3 py-2 rounded-xl font-semibold transition-all">
           <Plus size={13} /> Criar plano
         </button>
       </div>
@@ -207,7 +217,7 @@ function PlansTab() {
           <PlanFormFields form={createForm} onChange={setCreateForm} />
           <div className="flex gap-2">
             <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !createForm.name || !createForm.price_cents}
-              className="flex items-center gap-1.5 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-semibold transition-all">
+              className="flex items-center gap-1.5 text-xs bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white px-4 py-2 rounded-xl font-semibold transition-all">
               <Check size={13} /> {createMutation.isPending ? 'Criando…' : 'Criar'}
             </button>
             <button onClick={() => setShowCreate(false)} className="text-xs text-gray-500 hover:text-white px-3 py-2">Cancelar</button>
@@ -229,7 +239,7 @@ function PlansTab() {
               <PlanFormFields form={editForm} onChange={setEditForm} />
               <div className="flex gap-2 pt-1">
                 <button onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending}
-                  className="flex items-center gap-1.5 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-semibold transition-all">
+                  className="flex items-center gap-1.5 text-xs bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white px-4 py-2 rounded-xl font-semibold transition-all">
                   <Check size={13} /> {updateMutation.isPending ? 'Salvando…' : 'Salvar'}
                 </button>
                 <button onClick={() => setEditingId(null)} className="text-xs text-gray-500 hover:text-white px-3 py-2">Cancelar</button>
@@ -244,14 +254,22 @@ function PlansTab() {
                     <Badge color={p.active ? 'green' : 'gray'} label={p.active ? 'Ativo' : 'Inativo'} />
                   </div>
                   <p className="text-gray-500 text-xs mt-0.5">
-                    {(p.price_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/{intervalLabel(p.interval)}
+                    {formatPrice(p.price_cents)}/{intervalLabel(p.interval)}
                     {p.abacate_pay_product_id && <span className="ml-2 font-mono">{p.abacate_pay_product_id}</span>}
                   </p>
                 </div>
-                <button onClick={() => startEdit(p)}
-                  className="text-xs text-green-400 hover:text-green-300 font-medium transition-colors">
-                  Editar
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => startEdit(p)}
+                    className="text-xs text-[#FE015C] hover:text-[#FD267D] font-medium transition-colors">
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => { if (confirm(`Excluir plano "${p.name}"? Esta ação não pode ser desfeita.`)) deleteMutation.mutate(p.id); }}
+                    disabled={deleteMutation.isPending}
+                    className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors disabled:opacity-50 flex items-center gap-1">
+                    <Trash2 size={11} /> Excluir
+                  </button>
+                </div>
               </div>
               <div className="flex gap-6 text-xs">
                 <span className="text-gray-400">Funis: <span className="text-white font-medium">{p.max_calls === 0 ? '∞' : p.max_calls}</span></span>
@@ -274,12 +292,34 @@ function UsersTab() {
   const [createForm, setCreateForm] = useState({ name: '', email: '', password: '' });
   const [assigningUser, setAssigningUser] = useState<{ id: string; name: string } | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [changingPwd, setChangingPwd] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [impersonating, setImpersonating] = useState<string | null>(null);
+  useAuthStore(); // trigger re-render on auth change
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const { data, isLoading, isError } = useQuery({ queryKey: ['admin-users', page, search], queryFn: () => listAdminUsers(page, search) });
   const { data: plans = [] } = useQuery({ queryKey: ['admin-plans'], queryFn: listAllPlans });
   const block = useMutation({ mutationFn: blockUser, onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }) });
   const unblock = useMutation({ mutationFn: unblockUser, onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }) });
   const del = useMutation({ mutationFn: deleteAdminUser, onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }) });
+
+  const changePwdMutation = useMutation({
+    mutationFn: () => changeUserPassword(changingPwd!.id, newPassword),
+    onSuccess: () => { setChangingPwd(null); setNewPassword(''); },
+  });
+
+  const handleImpersonate = async (u: { id: string; name: string; email: string; role: string }) => {
+    setImpersonating(u.id);
+    try {
+      const { access_token } = await impersonateUser(u.id);
+      const { setAuth } = useAuthStore.getState();
+      setAuth({ id: u.id, name: u.name, email: u.email, role: u.role, created_at: '' }, access_token, '');
+      navigate('/dashboard');
+    } finally {
+      setImpersonating(null);
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: () => createAdminUser(createForm),
@@ -308,7 +348,7 @@ function UsersTab() {
             <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Buscar por nome ou email…"
               className={inputCls + ' w-full pl-9'} />
           </div>
-          <button type="submit" className="px-4 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm font-semibold transition-all">
+          <button type="submit" className="px-4 py-2.5 bg-[#FE015C] hover:bg-[#FD267D] text-white rounded-xl text-sm font-semibold transition-all">
             Buscar
           </button>
         </form>
@@ -344,7 +384,7 @@ function UsersTab() {
           <div className="flex gap-2">
             <button onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending || !createForm.name || !createForm.email || createForm.password.length < 6}
-              className="flex items-center gap-1.5 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl font-semibold transition-all">
+              className="flex items-center gap-1.5 text-xs bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white px-4 py-2 rounded-xl font-semibold transition-all">
               <Check size={13} /> {createMutation.isPending ? 'Criando…' : 'Criar'}
             </button>
             <button onClick={() => setShowCreate(false)} className="text-xs text-gray-500 hover:text-white px-3 py-2">Cancelar</button>
@@ -366,7 +406,7 @@ function UsersTab() {
               <option value="">— escolha um plano —</option>
               {plans.map(p => (
                 <option key={p.id} value={p.id}>
-                  {p.name} — {(p.price_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}/{intervalLabel(p.interval)}
+                  {p.name} — {formatPrice(p.price_cents)}/{intervalLabel(p.interval)}
                 </option>
               ))}
             </select>
@@ -379,6 +419,40 @@ function UsersTab() {
             <button onClick={() => setAssigningUser(null)} className="text-xs text-gray-500 hover:text-white px-3 py-2">Cancelar</button>
           </div>
           {assignMutation.isError && <ErrorState message="Erro ao vincular plano." />}
+        </div>
+      )}
+
+      {changingPwd && (
+        <div className="border border-[#FE015C]/20 bg-[#FE015C]/5 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-white flex items-center gap-2">
+              <Key size={14} className="text-[#FE015C]" />
+              Alterar senha — {changingPwd.name}
+            </p>
+            <button onClick={() => { setChangingPwd(null); setNewPassword(''); }}><X size={15} className="text-gray-500" /></button>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500">Nova senha (mín. 6 caracteres)</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              className={inputCls + ' w-full'}
+              placeholder="••••••••"
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => changePwdMutation.mutate()}
+              disabled={changePwdMutation.isPending || newPassword.length < 6}
+              className="flex items-center gap-1.5 text-xs bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white px-4 py-2 rounded-xl font-semibold transition-all">
+              <Check size={13} /> {changePwdMutation.isPending ? 'Salvando…' : 'Salvar senha'}
+            </button>
+            <button onClick={() => { setChangingPwd(null); setNewPassword(''); }} className="text-xs text-gray-500 hover:text-white px-3 py-2">Cancelar</button>
+          </div>
+          {changePwdMutation.isError && <ErrorState message="Erro ao alterar senha." />}
+          {changePwdMutation.isSuccess && <p className="text-xs text-green-400">Senha alterada com sucesso.</p>}
         </div>
       )}
 
@@ -398,11 +472,23 @@ function UsersTab() {
                   <Td><Badge color={u.role === 'admin' ? 'purple' : 'gray'} label={u.role} /></Td>
                   <Td><Badge color={u.is_blocked ? 'red' : 'green'} label={u.is_blocked ? 'Bloqueado' : 'Ativo'} /></Td>
                   <td className="py-2.5 flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={() => handleImpersonate(u)}
+                      disabled={impersonating === u.id}
+                      className="text-xs text-[#FE015C] hover:text-[#FD267D] font-medium flex items-center gap-1 disabled:opacity-50 transition-colors"
+                      title="Acessar dashboard deste usuário">
+                      <LogIn size={11} /> {impersonating === u.id ? 'Acessando…' : 'Acessar'}
+                    </button>
                     <button onClick={() => { setAssigningUser({ id: u.id, name: u.name }); setSelectedPlanId(''); }}
-                      className="text-xs text-blue-400 hover:text-blue-300 font-medium">Vincular plano</button>
+                      className="text-xs text-blue-400 hover:text-blue-300 font-medium">Plano</button>
+                    <button
+                      onClick={() => { setChangingPwd({ id: u.id, name: u.name }); setNewPassword(''); }}
+                      className="text-xs text-yellow-400 hover:text-yellow-300 font-medium flex items-center gap-1">
+                      <Key size={11} /> Senha
+                    </button>
                     {u.is_blocked
                       ? <button onClick={() => unblock.mutate(u.id)} className="text-xs text-green-400 hover:text-green-300 font-medium">Desbloquear</button>
-                      : <button onClick={() => block.mutate(u.id)} className="text-xs text-yellow-400 hover:text-yellow-300 font-medium">Bloquear</button>
+                      : <button onClick={() => block.mutate(u.id)} className="text-xs text-gray-400 hover:text-gray-300 font-medium">Bloquear</button>
                     }
                     <button onClick={() => { if (confirm(`Excluir ${u.name}?`)) del.mutate(u.id); }}
                       className="text-xs text-red-400 hover:text-red-300 font-medium">Excluir</button>
@@ -433,12 +519,12 @@ function SubscriptionsTab() {
       ) : (
         <>
           <TableWrap>
-            <thead><tr>{['ID','Usuário','Status','Criado','Ação'].map(h => <Th key={h}>{h}</Th>)}</tr></thead>
+            <thead><tr>{['Usuário','Email','Status','Criado','Ação'].map(h => <Th key={h}>{h}</Th>)}</tr></thead>
             <tbody>
-              {data.data.map((s) => (
+              {data.data.map((s: { id: string; user_id: string; user_name?: string; user_email?: string; status: string; created_at: string }) => (
                 <tr key={s.id} className="border-t border-white/5">
-                  <Td mono>{s.id.slice(0, 8)}…</Td>
-                  <Td mono>{s.user_id.slice(0, 8)}…</Td>
+                  <Td>{s.user_name || '—'}</Td>
+                  <Td mono>{s.user_email || s.user_id.slice(0, 8) + '…'}</Td>
                   <Td><Badge color={s.status === 'active' ? 'green' : 'gray'} label={s.status} /></Td>
                   <Td>{new Date(s.created_at).toLocaleDateString('pt-BR')}</Td>
                   <td className="py-2.5">

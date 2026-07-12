@@ -26,4 +26,5 @@ type PlanRepository interface {
 	FindByID(id uuid.UUID) (*Plan, error)
 	Create(p *Plan) error
 	Update(p *Plan) error
+	Delete(id uuid.UUID) error
 }

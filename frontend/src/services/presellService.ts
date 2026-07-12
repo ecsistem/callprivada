@@ -56,6 +56,14 @@ export interface PresellConfig {
   cta_color: string;
   redirect_url: string;
   downsell_slug?: string;
+
+  // Downsell — price comparison block
+  /** Preço original riscado, ex: "R$ 497" */
+  original_price_label?: string;
+  /** Preço com desconto, ex: "R$ 197" */
+  discounted_price_label?: string;
+  /** Badge de desconto, ex: "60% OFF — só hoje" */
+  discount_badge?: string;
 }
 
 export interface PresellComment {

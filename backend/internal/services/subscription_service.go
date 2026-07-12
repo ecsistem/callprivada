@@ -204,3 +204,7 @@ func (s *SubscriptionService) HandleWebhookEvent(event string, abacatePaySubID s
 
 	return s.subs.Update(sub)
 }
+
+func (s *SubscriptionService) DeletePlan(_ context.Context, planID uuid.UUID) error {
+	return s.plans.Delete(planID)
+}

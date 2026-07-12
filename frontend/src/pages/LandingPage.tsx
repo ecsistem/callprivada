@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Zap, BarChart2, ArrowRight, Check, Users, Video, Menu, X, Banknote } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import api from '../services/api';
+import { formatPrice } from '../lib/currency';
+import type { Plan } from '../services/subscriptionService';
+
+const fetchPublicPlans = () => api.get('/plans').then(r => r.data.data as Plan[]);
 
 /* ── Marquee ───────────────────────────────────────────────── */
 const MARQUEE_ITEMS = [
@@ -48,6 +54,108 @@ const NAV_LINKS = [
 ];
 
 /* ═══════════════════════════════════════════════════════════ */
+const INTERVAL_LABEL: Record<string, string> = {
+  MONTHLY: '/mês', SEMIANNUALLY: '/6 meses', ANNUALLY: '/ano',
+};
+
+function PricingCardSkeleton() {
+  return (
+    <div className="pricing-card rounded-2xl sm:rounded-3xl border border-white/10 bg-[#1c0510] p-6 sm:p-8 flex flex-col animate-pulse">
+      <div className="h-4 w-16 bg-white/8 rounded mb-4" />
+      <div className="h-10 w-28 bg-white/8 rounded mb-6" />
+      {[1,2,3,4].map(i => <div key={i} className="h-3 w-full bg-white/5 rounded mb-3" />)}
+      <div className="mt-auto h-11 w-full bg-white/8 rounded-2xl" />
+    </div>
+  );
+}
+
+function DynamicPricingCards({ navigate }: { navigate: (to: string) => void }) {
+  const { data: plans = [], isLoading } = useQuery({ queryKey: ['public-plans'], queryFn: fetchPublicPlans });
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 max-w-3xl mx-auto">
+        <PricingCardSkeleton /><PricingCardSkeleton />
+      </div>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <p className="text-center text-gray-600 text-sm py-8">Planos em breve.</p>
+    );
+  }
+
+  return (
+    <div className={`grid grid-cols-1 ${plans.length === 1 ? 'max-w-sm mx-auto' : 'md:grid-cols-2 max-w-3xl mx-auto'} gap-4 sm:gap-5`}>
+      {plans.map((plan, idx) => {
+        const isPrimary = idx === plans.length - 1 && plans.length > 1;
+        const price = formatPrice(plan.price_cents, 'BRL');
+        const interval = INTERVAL_LABEL[plan.interval] || '/mês';
+        const limits = [
+          plan.max_calls > 0 ? `Até ${plan.max_calls} funis` : 'Funis ilimitados',
+          plan.max_videos > 0 ? `Até ${plan.max_videos} vídeos` : 'Vídeos ilimitados',
+          plan.max_presells > 0 ? `Até ${plan.max_presells} presells` : 'Presells ilimitados',
+          'Pagamentos via PIX',
+          'Analytics completo',
+          'Suporte prioritário',
+        ];
+        return isPrimary ? (
+          <div key={plan.id} className="pricing-card relative rounded-2xl sm:rounded-3xl border border-[#FE015C]/40 bg-[#1c0510] p-6 sm:p-8 flex flex-col overflow-hidden hover:border-[#FE015C]/60 transition-all duration-300 shadow-xl shadow-[#FE015C]/10">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#FE015C]/8 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute top-4 right-4 bg-[#FE015C] text-white text-[10px] font-black px-2.5 py-1 rounded-full tracking-wide">POPULAR</div>
+            <div className="mb-6 relative">
+              <p className="text-[#FE015C] text-sm font-medium mb-1">{plan.name}</p>
+              <div className="flex items-end gap-1">
+                <span className="text-4xl sm:text-5xl font-black text-white">{price}</span>
+                <span className="text-gray-400 text-sm mb-1.5">{interval}</span>
+              </div>
+            </div>
+            <ul className="space-y-3 flex-1 mb-8 relative">
+              {limits.map(f => (
+                <li key={f} className="flex items-center gap-3 text-sm text-gray-200">
+                  <div className="w-4 h-4 rounded-full bg-[#FE015C]/20 border border-[#FE015C]/40 flex items-center justify-center shrink-0">
+                    <Check size={9} className="text-[#FE015C]" />
+                  </div>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => navigate('/register')}
+              className="relative w-full py-3.5 rounded-2xl font-bold text-sm bg-[#FE015C] hover:bg-[#FD267D] active:scale-[0.98] text-white transition-all shadow-lg shadow-[#FE015C]/30">
+              Começar com {plan.name}
+            </button>
+          </div>
+        ) : (
+          <div key={plan.id} className="pricing-card relative rounded-2xl sm:rounded-3xl border border-white/10 bg-[#1c0510] p-6 sm:p-8 flex flex-col hover:border-white/20 transition-all duration-300">
+            <div className="mb-6">
+              <p className="text-gray-400 text-sm font-medium mb-1">{plan.name}</p>
+              <div className="flex items-end gap-1">
+                <span className="text-4xl sm:text-5xl font-black text-white">{price}</span>
+                <span className="text-gray-500 text-sm mb-1.5">{interval}</span>
+              </div>
+            </div>
+            <ul className="space-y-3 flex-1 mb-8">
+              {limits.map(f => (
+                <li key={f} className="flex items-center gap-3 text-sm text-gray-300">
+                  <div className="w-4 h-4 rounded-full bg-white/8 border border-white/12 flex items-center justify-center shrink-0">
+                    <Check size={9} className="text-gray-400" />
+                  </div>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <button onClick={() => navigate('/register')}
+              className="w-full py-3.5 rounded-2xl font-bold text-sm border border-white/15 hover:border-white/30 hover:bg-white/5 text-white transition-all">
+              Começar agora
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -613,81 +721,7 @@ export default function LandingPage() {
           <p className="text-gray-500 text-sm max-w-md mx-auto">Sem surpresas. Cancele quando quiser.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 max-w-3xl mx-auto">
-
-          {/* Plano Starter */}
-          <div className="pricing-card relative rounded-2xl sm:rounded-3xl border border-white/10 bg-[#1c0510] p-6 sm:p-8 flex flex-col hover:border-white/20 transition-all duration-300">
-            <div className="mb-6">
-              <p className="text-gray-400 text-sm font-medium mb-1">Starter</p>
-              <div className="flex items-end gap-1">
-                <span className="text-[13px] font-bold text-gray-400 mb-2.5">R$</span>
-                <span className="text-4xl sm:text-5xl font-black text-white">99</span>
-                <span className="text-gray-500 text-sm mb-1.5">/mês</span>
-              </div>
-              <p className="text-gray-600 text-xs mt-1">+ 10% por venda realizada</p>
-            </div>
-            <ul className="space-y-3 flex-1 mb-8">
-              {[
-                'Chamadas ilimitadas',
-                'Upload de vídeos',
-                'Funis de venda',
-                'Pagamentos via PIX',
-                'Analytics básico',
-                'Suporte por email',
-              ].map(f => (
-                <li key={f} className="flex items-center gap-3 text-sm text-gray-300">
-                  <div className="w-4 h-4 rounded-full bg-white/8 border border-white/12 flex items-center justify-center shrink-0">
-                    <Check size={9} className="text-gray-400" />
-                  </div>
-                  {f}
-                </li>
-              ))}
-            </ul>
-            <button onClick={() => navigate('/register')}
-              className="w-full py-3.5 rounded-2xl font-bold text-sm border border-white/15 hover:border-white/30 hover:bg-white/5 text-white transition-all">
-              Começar agora
-            </button>
-          </div>
-
-          {/* Plano Pro — destaque */}
-          <div className="pricing-card relative rounded-2xl sm:rounded-3xl border border-[#FE015C]/40 bg-[#1c0510] p-6 sm:p-8 flex flex-col overflow-hidden hover:border-[#FE015C]/60 transition-all duration-300 shadow-xl shadow-[#FE015C]/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#FE015C]/8 via-transparent to-transparent pointer-events-none" />
-            <div className="absolute top-4 right-4 bg-[#FE015C] text-white text-[10px] font-black px-2.5 py-1 rounded-full tracking-wide">POPULAR</div>
-
-            <div className="mb-6 relative">
-              <p className="text-[#FE015C] text-sm font-medium mb-1">Pro</p>
-              <div className="flex items-end gap-1">
-                <span className="text-[13px] font-bold text-[#FD267D] mb-2.5">R$</span>
-                <span className="text-4xl sm:text-5xl font-black text-white">199</span>
-                <span className="text-gray-400 text-sm mb-1.5">/mês</span>
-              </div>
-              <p className="text-gray-600 text-xs mt-1">+ 5% por venda · Metade da taxa</p>
-            </div>
-
-            <ul className="space-y-3 flex-1 mb-8 relative">
-              {[
-                'Tudo do Starter',
-                'Taxa reduzida: só 5%',
-                'Upsell e Downsell',
-                'Analytics avançado',
-                'Suporte prioritário',
-                'Domínio personalizado',
-              ].map(f => (
-                <li key={f} className="flex items-center gap-3 text-sm text-gray-200">
-                  <div className="w-4 h-4 rounded-full bg-[#FE015C]/20 border border-[#FE015C]/40 flex items-center justify-center shrink-0">
-                    <Check size={9} className="text-[#FE015C]" />
-                  </div>
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            <button onClick={() => navigate('/register')}
-              className="relative w-full py-3.5 rounded-2xl font-bold text-sm bg-[#FE015C] hover:bg-[#FD267D] active:scale-[0.98] text-white transition-all shadow-lg shadow-[#FE015C]/30">
-              Começar com Pro
-            </button>
-          </div>
-        </div>
+        <DynamicPricingCards navigate={navigate} />
 
         {/* Nota rodapé */}
         <p className="text-center text-gray-600 text-xs mt-8">

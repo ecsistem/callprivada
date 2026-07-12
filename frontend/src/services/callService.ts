@@ -27,7 +27,7 @@ export interface PublicEvent {
   id: string;
   trigger_at_seconds: number;
   duration_seconds: number;
-  type: 'popup' | 'fullscreen' | 'fake_billing' | 'offer_call' | 'countdown' | 'upsell' | 'reconnect_paywall' | 'signal_drop' | 'fake_typing' | 'screenshot_alert' | 'battery_low' | 'incoming_call' | 'fake_gift' | 'viewer_count' | 'social_proof' | 'exclusive_access' | 'tip_jar' | 'video_lock' | 'phone_block';
+  type: 'popup' | 'fullscreen' | 'fake_billing' | 'offer_call' | 'countdown' | 'upsell' | 'reconnect_paywall' | 'signal_drop' | 'fake_typing' | 'screenshot_alert' | 'battery_low' | 'incoming_call' | 'fake_gift' | 'viewer_count' | 'social_proof' | 'exclusive_access' | 'tip_jar' | 'video_lock' | 'phone_block' | 'age_gate';
   title: string;
   description: string;
   button_text?: string;
@@ -58,6 +58,7 @@ export interface PublicCall {
   call_mode: 'incoming' | 'outgoing';
   billing_mode?: 'none' | 'credits';
   end_call_redirect_url?: string;
+  currency?: string;
   events: PublicEvent[];
   tracking?: import('./trackingService').TrackingConfig;
 }

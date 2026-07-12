@@ -15,6 +15,14 @@ Regras:
 - [x] Registrar pivot e novas decisões em DECISIONS.md.
 - [ ] Aprovação do responsável para iniciar Fase 1 (Estrutura base) do novo roadmap.
 
+## Bugs corrigidos / melhorias (fora de fase)
+- [x] `signal_drop` / `screenshot_alert` overlays nunca descartados — `useCallback` em `dismissEvent`/`resumeVideo`.
+- [x] Preview de vídeo em `/calls/new` não funcionava — `playInline={true}` + `stopPropagation`.
+- [x] `age_gate` adicionado como evento de verificação +18 com cobrança PIX.
+- [x] Propagação de moeda (BRL/EUR/USD/GBP) em todas as páginas do frontend.
+- [x] WayMB: webhook lookup por `waymb_txn_id`, auth no body, persistência de dados Multibanco.
+- [x] Limite `max_videos` do plano aplicado no upload de vídeo (backend + frontend badge).
+
 ### Tarefas do escopo anterior (CallPrivada genérico) — obsoletas
 - [~] (obsoleta) Criar estrutura de pastas do backend (Clean Architecture) — refeita na Fase 1 do novo roadmap.
 - [~] (obsoleta) Criar estrutura de pastas do frontend (React) — refeita na Fase 1 do novo roadmap.
@@ -270,3 +278,27 @@ Regras:
 - [x] `EditCallPage.tsx` — painel "Presells vinculados" com badges de tipo e link de criação.
 - [x] `CallsPage.tsx` — health bar por card (eventos / presell / foto); atalho de timeline; confirmação de exclusão inline.
 - [x] `DashboardPage.tsx` — `SetupChecklist` para usuários sem chamadas (5 passos acionáveis); `FunnelGuide` para usuários com chamadas.
+
+
+## WayMB — Gateway europeu (aprovado 2026-07-11)
+- [x] Migrations 000032 e 000033: campos WayMB em `user_payment_configs` e `billing_transactions`.
+- [x] Pacote `internal/waymb/client.go` — `CreateTransaction` (mbway/multibanco/bizum) + `GetTransactionInfo`.
+- [x] Domain `user_payment_config.go` — campos WayMB + `ActiveGateway` + `IsWayMBConfigured()` + `Gateway()`.
+- [x] Domain `billing_transaction.go` — campos `Gateway`, `WayMBTxnID`, `WayMBMethod`, `Multibanco*`.
+- [x] Models e repositories atualizados (Upsert propaga todos os campos WayMB, `UpdateWayMBTxnID`).
+- [x] `PaymentConfigService.Save` aceita `SavePaymentConfigInput` com todos os campos.
+- [x] `BillingService` — `CreateWayMBPayment`, `GetWayMBStatus`, `ProcessWayMBWebhook`.
+- [x] `BillingHandler` — `CreateWayMBPayment`, `GetWayMBStatus`, `WayMBWebhook`.
+- [x] Rotas: `POST /public/calls/:slug/billing/waymb`, `GET /public/billing/transactions/:id/waymb-status`, `POST /webhooks/waymb`.
+- [x] `PaymentSettingsPage` — seletor ZuckPay/WayMB + seções colapsáveis + webhook URL de cada gateway.
+- [x] `paymentConfigService.ts` — tipos e `savePaymentConfig` atualizados para WayMB.
+- [x] `billingService.ts` — `createWayMBPayment` e `checkWayMBStatus`.
+- [x] `CreditsOverlay` — mode `method` (seleção MB WAY/Multibanco/Bizum) + mode `waymb` (tela pós-criação com dados de Multibanco ou confirmação MB WAY/Bizum).
+
+## Dashboard & Downsell — 2026-07-12
+- [x] `DashboardPage.tsx` / `dashboardService.ts` — filtro por intervalo de data personalizado no painel de Pagamentos (tab "Período" + date pickers from/to).
+- [x] Backend `billing_transaction_repository.go` + `billing_service.go` + `billing_handler.go` — suporte a `period=custom&from=YYYY-MM-DD&to=YYYY-MM-DD`.
+- [x] `PresellEditorPage.tsx` — cores do design system unificadas (green → pink `#FE015C`): inputCls, Toggle, botão salvar, estado ativo de template.
+- [x] `presellService.ts` — campos `original_price_label`, `discounted_price_label`, `discount_badge` em `PresellConfig`.
+- [x] `PresellEditorPage.tsx` — bloco "preço/desconto" exclusivo para downsell (preço original riscado + preço com desconto + badge).
+- [x] `PresellPublicPage.tsx` — bloco de comparação de preço renderizado na página pública do downsell.

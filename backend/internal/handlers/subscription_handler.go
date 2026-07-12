@@ -192,3 +192,17 @@ func (h *SubscriptionHandler) Cancel(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// DeletePlan — DELETE /admin/plans/:id
+func (h *SubscriptionHandler) DeletePlan(c *gin.Context) {
+	planID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "id inválido"}})
+		return
+	}
+	if err := h.subs.DeletePlan(c.Request.Context(), planID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}

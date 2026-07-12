@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/callprivada/fwlc-backend/internal/domain"
+	"github.com/callprivada/fwlc-backend/internal/waymb"
 	"github.com/callprivada/fwlc-backend/internal/zuckpay"
 )
 
@@ -37,12 +38,18 @@ type CreateBillingInput struct {
 }
 
 type BillingResult struct {
-	TransactionID  string `json:"transaction_id"`
-	ZuckPayTxnID   string `json:"zuckpay_txn_id"`
-	QRCode         string `json:"qr_code"`
-	QRCodeURL      string `json:"qr_code_url"`
-	CheckoutURL    string `json:"checkout_url"`
-	AmountCents    int    `json:"amount_cents"`
+	TransactionID       string  `json:"transaction_id"`
+	Gateway             string  `json:"gateway"`
+	ZuckPayTxnID        string  `json:"zuckpay_txn_id,omitempty"`
+	WayMBTxnID          string  `json:"waymb_txn_id,omitempty"`
+	WayMBMethod         string  `json:"waymb_method,omitempty"`
+	MultibancoEntity    string  `json:"multibanco_entity,omitempty"`
+	MultibancoReference string  `json:"multibanco_reference,omitempty"`
+	MultibancoExpiresAt int64   `json:"multibanco_expires_at,omitempty"`
+	QRCode              string  `json:"qr_code,omitempty"`
+	QRCodeURL           string  `json:"qr_code_url,omitempty"`
+	CheckoutURL         string  `json:"checkout_url,omitempty"`
+	AmountCents         int     `json:"amount_cents"`
 }
 
 func (s *BillingService) CreatePIX(ctx context.Context, in CreateBillingInput) (*BillingResult, error) {
@@ -207,4 +214,156 @@ func (s *BillingService) ProcessWebhook(ctx context.Context, rawBody []byte, sig
 		AmountCents: txn.AmountCents,
 		Status:      status,
 	}, nil
+}
+
+// CreateWayMBPayment cria uma transação WayMB (mbway | multibanco | bizum).
+func (s *BillingService) CreateWayMBPayment(ctx context.Context, in CreateBillingInput, method string) (*BillingResult, error) {
+	call, err := s.calls.FindBySlug(ctx, in.Slug)
+	if err != nil {
+		return nil, err
+	}
+	if !call.IsPubliclyAccessible() {
+		return nil, domain.ErrCallExpired
+	}
+
+	cfg, err := s.configs.FindByUserID(ctx, call.UserID)
+	if err != nil || !cfg.IsWayMBConfigured() {
+		return nil, domain.ErrPaymentNotConfigured
+	}
+
+	txn := &domain.BillingTransaction{
+		CallID:      call.ID,
+		Gateway:     "waymb",
+		WayMBMethod: method,
+		AmountCents: in.AmountCents,
+		Status:      "PENDING",
+		PayerName:   in.PayerName,
+		PayerDocument: in.PayerDocument,
+		PayerEmail:  in.PayerEmail,
+	}
+	if err := s.txns.Create(ctx, txn); err != nil {
+		return nil, err
+	}
+
+	client := waymb.NewClient(cfg.WayMBClientID, cfg.WayMBClientSecret, cfg.WayMBAccountEmail)
+	resp, err := client.CreateTransaction(waymb.CreateTransactionRequest{
+		Method: method,
+		Amount: float64(in.AmountCents) / 100.0,
+		Payer: waymb.Payer{
+			Name:     in.PayerName,
+			Email:    in.PayerEmail,
+			Document: in.PayerDocument,
+			Phone:    in.PayerPhone,
+		},
+		PaymentDescription: "CallPrivada",
+		Currency:           cfg.Currency,
+		CallbackURL:        fmt.Sprintf("%s/api/v1/webhooks/waymb", s.webhookBase),
+	})
+	if err != nil {
+		_ = s.txns.UpdateStatus(ctx, txn.ID, "FAILED")
+		return nil, fmt.Errorf("falha ao criar cobrança WayMB: %w", err)
+	}
+
+	_ = s.txns.UpdateWayMBTxnID(ctx, txn.ID, resp.ID)
+
+	result := &BillingResult{
+		TransactionID: txn.ID.String(),
+		Gateway:       "waymb",
+		WayMBTxnID:    resp.ID,
+		WayMBMethod:   method,
+		AmountCents:   in.AmountCents,
+	}
+	if resp.ReferenceData != nil {
+		result.MultibancoEntity = resp.ReferenceData.Entity
+		result.MultibancoReference = resp.ReferenceData.Reference
+		result.MultibancoExpiresAt = resp.ReferenceData.ExpiresAt
+		_ = s.txns.UpdateWayMBMultibancoData(ctx, txn.ID,
+			resp.ReferenceData.Entity,
+			resp.ReferenceData.Reference,
+			resp.ReferenceData.ExpiresAt,
+		)
+	}
+	return result, nil
+}
+
+// GetWayMBStatus consulta o status de uma transação WayMB.
+func (s *BillingService) GetWayMBStatus(ctx context.Context, txnID uuid.UUID) (string, int, error) {
+	txn, err := s.txns.FindByID(ctx, txnID)
+	if err != nil {
+		return "", 0, err
+	}
+
+	if txn.Status == "PENDING" && txn.WayMBTxnID != "" {
+		cfg, err := s.getConfigForTransaction(ctx, txn)
+		if err == nil && cfg.IsWayMBConfigured() {
+			client := waymb.NewClient(cfg.WayMBClientID, cfg.WayMBClientSecret, cfg.WayMBAccountEmail)
+			info, err := client.GetTransactionInfo(txn.WayMBTxnID)
+			if err == nil {
+				var mapped string
+				switch info.Status {
+				case "COMPLETED":
+					mapped = "PAID"
+				case "DECLINED":
+					mapped = "FAILED"
+				default:
+					mapped = "PENDING"
+				}
+				if mapped != txn.Status {
+					_ = s.txns.UpdateStatus(ctx, txnID, mapped)
+					txn.Status = mapped
+				}
+			}
+		}
+	}
+
+	return txn.Status, txn.AmountCents, nil
+}
+
+// ProcessWayMBWebhook processa callback da WayMB.
+// transactionID é o ID da WayMB (não UUID interno).
+func (s *BillingService) ProcessWayMBWebhook(ctx context.Context, transactionID, status string) (*WebhookResult, error) {
+	// Busca a transação interna pelo WayMB transaction ID.
+	txn, err := s.txns.FindByWayMBTxnID(ctx, transactionID)
+	if err != nil {
+		return nil, fmt.Errorf("transação não encontrada para waymb_id=%s: %w", transactionID, err)
+	}
+
+	call, err := s.calls.FindByID(ctx, txn.CallID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Valida o status diretamente na WayMB antes de liberar (conforme documentação).
+	cfg, cfgErr := s.configs.FindByUserID(ctx, call.UserID)
+	if cfgErr == nil && cfg.IsWayMBConfigured() {
+		client := waymb.NewClient(cfg.WayMBClientID, cfg.WayMBClientSecret, cfg.WayMBAccountEmail)
+		if info, infoErr := client.GetTransactionInfo(transactionID); infoErr == nil {
+			status = info.Status // usa o status confirmado pela API
+		}
+	}
+
+	var mapped string
+	switch status {
+	case "COMPLETED":
+		mapped = "PAID"
+	case "DECLINED":
+		mapped = "FAILED"
+	default:
+		mapped = "PENDING"
+	}
+
+	if err := s.txns.UpdateStatus(ctx, txn.ID, mapped); err != nil {
+		return nil, err
+	}
+
+	return &WebhookResult{
+		CallUserID:  call.UserID,
+		CallTitle:   call.Title,
+		AmountCents: txn.AmountCents,
+		Status:      mapped,
+	}, nil
+}
+
+func (s *BillingService) GetStats(ctx context.Context, userID uuid.UUID, period, from, to string) (*domain.PaymentStats, error) {
+	return s.txns.GetStatsByUser(ctx, userID, period, from, to)
 }

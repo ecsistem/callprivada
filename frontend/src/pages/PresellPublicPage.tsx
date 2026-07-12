@@ -571,6 +571,38 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
             </div>
           )}
 
+          {/* Downsell price comparison block */}
+          {isDownsell && config.discounted_price_label && (
+            <div className="w-full mb-6">
+              {config.discount_badge && (
+                <div
+                  className="flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold mb-3 w-fit mx-auto"
+                  style={{ background: 'rgba(220,38,38,0.15)', border: '1px solid rgba(220,38,38,0.35)', color: '#ef4444' }}
+                >
+                  🔥 {config.discount_badge}
+                </div>
+              )}
+              <div
+                className="rounded-2xl p-5 text-center"
+                style={{ background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)' }}
+              >
+                {config.original_price_label && (
+                  <p style={{ color: textColor, opacity: 0.4 }} className="text-base line-through mb-1">
+                    {config.original_price_label}
+                  </p>
+                )}
+                <p style={{ color: ctaColor }} className="text-4xl font-extrabold leading-none">
+                  {config.discounted_price_label}
+                </p>
+                {config.original_price_label && (
+                  <p style={{ color: textColor, opacity: 0.5 }} className="text-xs mt-1.5">
+                    em vez de {config.original_price_label}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* CTA button */}
           <button
             onClick={handleCTA}

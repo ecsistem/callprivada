@@ -27,6 +27,7 @@ const (
 	EventTypeTipJar             = "tip_jar"
 	EventTypeVideoLock          = "video_lock"
 	EventTypePhoneBlock         = "phone_block"
+	EventTypeAgeGate            = "age_gate"
 )
 
 type CallEvent struct {

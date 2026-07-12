@@ -1,0 +1,2 @@
+ALTER TABLE user_payment_configs
+    ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'BRL';

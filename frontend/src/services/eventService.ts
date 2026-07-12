@@ -1,6 +1,6 @@
 import api from './api';
 
-export type EventType = 'popup' | 'fullscreen' | 'fake_billing' | 'offer_call' | 'countdown' | 'upsell' | 'reconnect_paywall' | 'signal_drop' | 'fake_typing' | 'screenshot_alert' | 'battery_low' | 'incoming_call' | 'fake_gift' | 'viewer_count' | 'social_proof' | 'exclusive_access' | 'tip_jar' | 'video_lock' | 'phone_block';
+export type EventType = 'popup' | 'fullscreen' | 'fake_billing' | 'offer_call' | 'countdown' | 'upsell' | 'reconnect_paywall' | 'signal_drop' | 'fake_typing' | 'screenshot_alert' | 'battery_low' | 'incoming_call' | 'fake_gift' | 'viewer_count' | 'social_proof' | 'exclusive_access' | 'tip_jar' | 'video_lock' | 'phone_block' | 'age_gate';
 
 export interface CallEvent {
   id: string;

@@ -5,15 +5,13 @@ import {
   Phone, Video, CreditCard, Zap, Plus,
   Eye, TrendingUp, ArrowUpRight, Activity,
   Flame, Target, Rocket, ChevronRight, Sparkles,
+  DollarSign, CheckCircle2, Clock,
 } from 'lucide-react';
-import { getDashboardSummary } from '../services/dashboardService';
+import { getDashboardSummary, getPaymentStats, type PaymentPeriod } from '../services/dashboardService';
 import { useAuthStore } from '../stores/authStore';
 import { useWebSocket, type WSEvent } from '../hooks/useWebSocket';
 import { WSToastList, makeToast, type Toast } from '../components/WSToast';
-
-function formatPrice(cents: number) {
-  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
+import { formatPrice } from '../lib/currency';
 
 function intervalLabel(interval: string) {
   switch (interval) {
@@ -59,11 +57,11 @@ function QuickAction({
   if (variant === 'primary') {
     return (
       <Link to={to}
-        className="group flex items-center gap-4 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 rounded-2xl px-5 py-4 transition-all shadow-lg shadow-green-900/30">
+        className="group flex items-center gap-4 bg-[#FE015C] hover:bg-[#FD267D] rounded-2xl px-5 py-4 transition-all shadow-lg shadow-[#FE015C]/20">
         <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center shrink-0">{icon}</div>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm text-white">{label}</p>
-          <p className="text-xs text-green-100/70 mt-0.5 truncate">{sub}</p>
+          <p className="text-xs text-white/70 mt-0.5 truncate">{sub}</p>
         </div>
         <ArrowUpRight size={16} className="text-white/60 shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
       </Link>
@@ -101,9 +99,9 @@ function SetupChecklist() {
       desc: 'Configure nome, foto do contato e o vídeo da chamada.',
       to: '/calls/new',
       cta: 'Criar chamada',
-      color: 'text-green-400',
-      bg: 'bg-green-500/10',
-      border: 'border-green-500/20',
+      color: 'text-[#FE015C]',
+      bg: 'bg-[#FE015C]/10',
+      border: 'border-[#FE015C]/20',
     },
     {
       n: 3,
@@ -138,10 +136,10 @@ function SetupChecklist() {
   ];
 
   return (
-    <div className="bg-gradient-to-br from-green-500/5 via-transparent to-blue-500/5 border border-green-500/15 rounded-2xl p-6">
+    <div className="bg-gradient-to-br from-[#FE015C]/5 via-transparent to-[#FD267D]/5 border border-[#FE015C]/15 rounded-2xl p-6">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-8 h-8 rounded-xl bg-green-500/10 flex items-center justify-center">
-          <Rocket size={16} className="text-green-400" />
+        <div className="w-8 h-8 rounded-xl bg-[#FE015C]/10 flex items-center justify-center">
+          <Rocket size={16} className="text-[#FE015C]" />
         </div>
         <div>
           <p className="text-white font-semibold text-sm">Primeiros passos — lance seu funil em 5 minutos</p>
@@ -180,7 +178,7 @@ function FunnelGuide() {
       n: '02',
       title: 'Cria a chamada',
       desc: 'Configure o funil: nome do contato, foto e os eventos que aparecem durante o vídeo (popup, oferta, countdown).',
-      color: 'text-green-400', bg: 'bg-green-500/10',
+      color: 'text-[#FE015C]', bg: 'bg-[#FE015C]/10',
     },
     {
       n: '03',
@@ -212,6 +210,160 @@ function FunnelGuide() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+const PERIODS: { key: PaymentPeriod; label: string }[] = [
+  { key: 'day',    label: 'Hoje' },
+  { key: 'month',  label: 'Este mês' },
+  { key: 'year',   label: 'Este ano' },
+  { key: 'all',    label: 'Total' },
+  { key: 'custom', label: 'Período' },
+];
+
+function PaymentsPanel() {
+  const [period, setPeriod] = useState<PaymentPeriod>('month');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
+  const canQuery = period !== 'custom' || (from !== '' && to !== '');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['payment-stats', period, from, to],
+    queryFn: () => getPaymentStats(period, from, to),
+    enabled: canQuery,
+  });
+
+  const convRate = data && data.generated > 0
+    ? Math.round((data.paid / data.generated) * 100)
+    : 0;
+
+  return (
+    <div className="bg-[#18181b] border border-white/5 rounded-2xl overflow-hidden">
+      {/* Header */}
+      <div className="px-5 pt-5 pb-4 flex items-center justify-between gap-4 border-b border-white/5">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+            <DollarSign size={17} className="text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Pagamentos</p>
+            <p className="text-xs text-gray-500 mt-0.5">Cobranças geradas e pagas</p>
+          </div>
+        </div>
+
+        {/* Period tabs */}
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
+            {PERIODS.map(p => (
+              <button
+                key={p.key}
+                onClick={() => setPeriod(p.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  period === p.key
+                    ? 'bg-[#FE015C] text-white shadow-sm shadow-[#FE015C]/30'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {period === 'custom' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={from}
+                onChange={e => setFrom(e.target.value)}
+                className="bg-[#1c0510] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#FE015C]/50 transition-colors"
+              />
+              <span className="text-gray-600 text-xs">até</span>
+              <input
+                type="date"
+                value={to}
+                min={from}
+                onChange={e => setTo(e.target.value)}
+                className="bg-[#1c0510] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#FE015C]/50 transition-colors"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-3 divide-x divide-white/5">
+        {/* Gerados */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock size={13} className="text-gray-500" />
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Gerados</p>
+          </div>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-white/5 rounded-lg animate-pulse" />
+          ) : (
+            <p className="text-3xl font-bold text-white">{data?.generated ?? 0}</p>
+          )}
+          <p className="text-xs text-gray-600 mt-1">cobranças criadas</p>
+        </div>
+
+        {/* Pagos */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 size={13} className="text-emerald-500" />
+            <p className="text-xs text-emerald-600 font-medium uppercase tracking-wider">Pagos</p>
+          </div>
+          {isLoading ? (
+            <div className="h-8 w-16 bg-white/5 rounded-lg animate-pulse" />
+          ) : (
+            <p className="text-3xl font-bold text-emerald-400">{data?.paid ?? 0}</p>
+          )}
+          <p className="text-xs text-gray-600 mt-1">confirmados</p>
+        </div>
+
+        {/* Receita */}
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp size={13} className="text-blue-500" />
+            <p className="text-xs text-blue-600 font-medium uppercase tracking-wider">Receita</p>
+          </div>
+          {isLoading ? (
+            <div className="h-8 w-24 bg-white/5 rounded-lg animate-pulse" />
+          ) : (
+            <p className="text-2xl font-bold text-blue-400 leading-tight">
+              {formatPrice(data?.total_cents ?? 0)}
+            </p>
+          )}
+          <p className="text-xs text-gray-600 mt-1">valor recebido</p>
+        </div>
+      </div>
+
+      {/* Conversion bar */}
+      {!isLoading && (data?.generated ?? 0) > 0 && (
+        <div className="px-5 pb-5">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs text-gray-600">Taxa de conversão</p>
+            <p className="text-xs font-semibold text-white">{convRate}%</p>
+          </div>
+          <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full transition-all duration-500"
+              style={{ width: `${convRate}%` }}
+            />
+          </div>
+          <div className="flex justify-between mt-1">
+            <p className="text-[10px] text-gray-700">0%</p>
+            <p className="text-[10px] text-gray-700">100%</p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && (data?.generated ?? 0) === 0 && (
+        <div className="px-5 pb-5 flex items-center gap-2 text-xs text-gray-600">
+          <DollarSign size={13} />
+          {!canQuery ? 'Selecione um período acima para filtrar' : `Nenhuma cobrança ${period === 'day' ? 'hoje' : period === 'month' ? 'neste mês' : period === 'year' ? 'neste ano' : period === 'custom' ? 'no período selecionado' : 'ainda'}`}
+        </div>
+      )}
     </div>
   );
 }
@@ -262,7 +414,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-white mt-0.5">Painel de Controle</h1>
         </div>
         <Link to="/calls/new"
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-green-900/30">
+          className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-[#FE015C]/30">
           <Plus size={16} />
           Novo funil
         </Link>
@@ -281,9 +433,9 @@ export default function DashboardPage() {
             <StatCard
               label="Funis criados"
               value={data.calls_count}
-              icon={<Phone size={18} className="text-green-400" />}
+              icon={<Phone size={18} className="text-[#FE015C]" />}
               sub="Chamadas configuradas"
-              color="bg-green-500/10"
+              color="bg-[#FE015C]/10"
             />
             <StatCard
               label="Funis ativos"
@@ -303,16 +455,19 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Payments panel */}
+      <PaymentsPanel />
+
       {/* Onboarding checklist for new users, compact guide for returning ones */}
       {data?.calls_count === 0 ? <SetupChecklist /> : <FunnelGuide />}
 
       {/* Plan banner */}
       {data !== undefined && (
-        <div className={`rounded-2xl p-5 border ${data.plan ? 'bg-green-500/5 border-green-500/15' : 'bg-yellow-500/5 border-yellow-500/20'}`}>
+        <div className={`rounded-2xl p-5 border ${data.plan ? 'bg-[#FE015C]/5 border-[#FE015C]/15' : 'bg-yellow-500/5 border-yellow-500/20'}`}>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${data.plan ? 'bg-green-500/10' : 'bg-yellow-500/10'}`}>
-                <TrendingUp size={18} className={data.plan ? 'text-green-400' : 'text-yellow-400'} />
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${data.plan ? 'bg-[#FE015C]/10' : 'bg-yellow-500/10'}`}>
+                <TrendingUp size={18} className={data.plan ? 'text-[#FE015C]' : 'text-yellow-400'} />
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase tracking-wider font-medium mb-0.5">Plano</p>
@@ -331,7 +486,7 @@ export default function DashboardPage() {
             <Link to="/subscription"
               className={`shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-all ${
                 data.plan
-                  ? 'text-green-400 bg-green-500/10 border border-green-500/20 hover:bg-green-500/15'
+                  ? 'text-[#FE015C] bg-[#FE015C]/10 border border-[#FE015C]/20 hover:bg-[#FE015C]/15'
                   : 'text-yellow-400 bg-yellow-500/10 border border-yellow-500/30 hover:bg-yellow-500/15'
               }`}>
               <Activity size={13} />

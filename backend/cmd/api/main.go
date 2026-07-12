@@ -114,7 +114,7 @@ func main() {
 	abacateClient := abacatepay.NewClient(cfg.AbacatePayAPIKey, cfg.AbacatePayBaseURL)
 	subService := services.NewSubscriptionService(planRepo, subRepo, userRepo, abacateClient)
 	videoService := services.NewVideoService(videoRepo, fileStore)
-	callService := services.NewCallService(callRepo, videoRepo, callEventRepo, fileStore)
+	callService := services.NewCallService(callRepo, videoRepo, callEventRepo, fileStore, paymentConfigRepo)
 	callEventService := services.NewCallEventService(callEventRepo, callRepo)
 	visitService := services.NewVisitService(visitRepo, callRepo)
 	dashboardService := services.NewDashboardService(callRepo, subRepo, planRepo, visitRepo)
@@ -133,7 +133,7 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService)
 	subHandler := handlers.NewSubscriptionHandler(subService)
 	webhookHandler := handlers.NewWebhookHandler(subService, cfg.AbacatePayWebhookSecret)
-	videoHandler := handlers.NewVideoHandler(videoService)
+	videoHandler := handlers.NewVideoHandler(videoService, subService)
 	callHandler := handlers.NewCallHandler(callService, trackingService, subService)
 	callEventHandler := handlers.NewCallEventHandler(callEventService)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
@@ -141,7 +141,7 @@ func main() {
 	billingHandler := handlers.NewBillingHandler(billingService, hub)
 	visitHandler := handlers.NewVisitHandler(visitService, hub)
 	wsHandler := handlers.NewWSHandler(hub, jwtService)
-	adminHandler := handlers.NewAdminHandler(adminService)
+	adminHandler := handlers.NewAdminHandler(adminService, jwtService)
 	presellHandler := handlers.NewPresellHandler(presellService, trackingService, subService)
 	trackingHandler := handlers.NewTrackingHandler(trackingService)
 
@@ -221,7 +221,9 @@ func main() {
 	public.GET("/calls/:slug", callHandler.GetPublic)
 	public.GET("/presell/:slug", presellHandler.GetPublic)
 	public.POST("/calls/:slug/billing/pix", billingHandler.CreatePIX)
+	public.POST("/calls/:slug/billing/waymb", billingHandler.CreateWayMBPayment)
 	public.GET("/billing/transactions/:id/status", billingHandler.GetPixStatus)
+	public.GET("/billing/transactions/:id/waymb-status", billingHandler.GetWayMBStatus)
 	public.POST("/calls/:slug/visits", visitHandler.Track)
 	public.PATCH("/visits/:visit_id", visitHandler.UpdateWatched)
 	public.POST("/presell/:slug/cta-click", presellHandler.CTAClick)
@@ -260,6 +262,11 @@ func main() {
 	dashboardGroup.Use(middlewares.RequireAuth(jwtService))
 	dashboardGroup.GET("/summary", dashboardHandler.Summary)
 
+	// Billing stats (autenticado).
+	billingAuth := api.Group("/billing")
+	billingAuth.Use(middlewares.RequireAuth(jwtService))
+	billingAuth.GET("/stats", billingHandler.GetPaymentStats)
+
 	// Admin (RequireAuth + RequireAdmin).
 	adminGroup := api.Group("/admin")
 	adminGroup.Use(middlewares.RequireAuth(jwtService))
@@ -276,15 +283,19 @@ func main() {
 	adminGroup.GET("/audit-logs", adminHandler.ListAuditLogs)
 	adminGroup.POST("/users", adminHandler.CreateUser)
 	adminGroup.POST("/users/:id/assign-plan", adminHandler.AssignPlan)
+	adminGroup.POST("/users/:id/impersonate", adminHandler.ImpersonateUser)
+	adminGroup.PUT("/users/:id/password", adminHandler.ChangeUserPassword)
 	adminGroup.GET("/plans", subHandler.ListAllPlans)
 	adminGroup.POST("/plans", subHandler.CreatePlan)
 	adminGroup.PUT("/plans/:id", subHandler.UpdatePlan)
 	adminGroup.PUT("/plans/:id/limits", subHandler.UpdatePlanLimits)
+	adminGroup.DELETE("/plans/:id", subHandler.DeletePlan)
 
 	// Webhooks (sem JWT).
 	webhooks := api.Group("/webhooks")
 	webhooks.POST("/abacatepay", webhookHandler.AbacatePay)
 	webhooks.POST("/zuckpay", billingHandler.ZuckPayWebhook)
+	webhooks.POST("/waymb", billingHandler.WayMBWebhook)
 
 	// Rota de arquivos locais — ativa apenas quando STORAGE_DRIVER=local.
 	if cfg.StorageDriver == "local" {

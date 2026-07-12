@@ -14,6 +14,7 @@ import {
   listEvents, createEvent, updateEvent, deleteEvent,
   type CallEvent, type UpsertEventPayload, type EventType,
 } from '../services/eventService';
+import { formatPrice } from '../lib/currency';
 
 /* ─── Constants ──────────────────────────────────────────────────────────── */
 
@@ -32,6 +33,7 @@ const EVENT_COLOR: Record<string, string> = {
   tip_jar: '#ec4899',
   video_lock: '#6366f1',
   phone_block: '#ef4444',
+  age_gate: '#f59e0b',
 };
 const EVENT_LABEL: Record<string, string> = {
   popup: 'Popup', fullscreen: 'Tela cheia', fake_billing: 'WhatsApp Pay',
@@ -48,6 +50,7 @@ const EVENT_LABEL: Record<string, string> = {
   tip_jar: 'Gorjeta / Presente',
   video_lock: 'Vídeo bloqueado',
   phone_block: 'Número bloqueado',
+  age_gate: 'Verificação de idade',
 };
 const EVENT_ICON: Record<string, React.ReactNode> = {
   popup: <MessageSquare className="w-3 h-3" />,
@@ -68,6 +71,7 @@ const EVENT_ICON: Record<string, React.ReactNode> = {
   tip_jar: <Gift className="w-3 h-3" />,
   video_lock: <Lock className="w-3 h-3" />,
   phone_block: <PhoneOff className="w-3 h-3" />,
+  age_gate: <Shield className="w-3 h-3" />,
 };
 const EVENT_DESC: Record<string, string> = {
   popup: 'Balão de mensagem', fullscreen: 'Sobreposição full', fake_billing: 'Tela de pagamento PIX',
@@ -84,12 +88,13 @@ const EVENT_DESC: Record<string, string> = {
   tip_jar: 'Escolhe valor e manda gorjeta via PIX',
   video_lock: 'Trava o vídeo com blur — paga para continuar',
   phone_block: '"Seu número foi bloqueado" — paga para liberar',
+  age_gate: 'Exige comprovação de maioridade via PIX para continuar',
 };
 const LAYER_GROUPS = [
   { label: 'Engajamento', types: ['popup', 'fullscreen', 'signal_drop', 'screenshot_alert', 'battery_low', 'incoming_call', 'fake_gift'] as EventType[] },
   { label: 'Social', types: ['viewer_count', 'social_proof', 'exclusive_access'] as EventType[] },
   { label: 'Vendas', types: ['offer_call', 'countdown', 'upsell'] as EventType[] },
-  { label: 'Pagamento', types: ['fake_billing', 'reconnect_paywall', 'tip_jar', 'video_lock', 'phone_block'] as EventType[] },
+  { label: 'Pagamento', types: ['fake_billing', 'reconnect_paywall', 'tip_jar', 'video_lock', 'phone_block', 'age_gate'] as EventType[] },
 ];
 
 type DragKind = 'playhead' | 'trimStart' | 'trimEnd' | 'event' | 'eventDuration';
@@ -122,7 +127,7 @@ function assignRows(events: CallEvent[]): Record<string, number> {
 /* ─── Event Preview (phone frame overlay) ───────────────────────────────── */
 
 function EventPreview({ event, live }: { event: CallEvent; live?: boolean }) {
-  const brl = ((event.billing_amount_cents ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const brl = formatPrice(event.billing_amount_cents ?? 0);
   const btnBg = event.button_color || EVENT_COLOR[event.type] || '#25d366';
 
   const liveTag = live ? (
@@ -256,7 +261,7 @@ function EventPreview({ event, live }: { event: CallEvent; live?: boolean }) {
       </div>
       {event.billing_amount_cents > 0 && (
         <p className="text-[#25d366] text-[9px] font-bold">
-          {(event.billing_amount_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          {formatPrice(event.billing_amount_cents)}
         </p>
       )}
     </div>
@@ -372,7 +377,7 @@ function EventPreview({ event, live }: { event: CallEvent; live?: boolean }) {
         {[1000, 2500, 5000, 9700].map(v => (
           <div key={v} className="w-full bg-pink-500/20 border border-pink-500/40 rounded-lg py-1.5 text-center">
             <span className="text-pink-300 text-[10px] font-bold">
-              {(v / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              {formatPrice(v)}
             </span>
           </div>
         ))}
@@ -390,7 +395,7 @@ function EventPreview({ event, live }: { event: CallEvent; live?: boolean }) {
         <p className="text-gray-400 text-[9px] text-center">{event.description || 'Pague para continuar assistindo'}</p>
         <div className="w-full bg-indigo-500 rounded-lg py-1.5 text-center mt-1">
           <span className="text-white text-[10px] font-bold">
-            {((event.billing_amount_cents || 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} — Desbloquear
+            {formatPrice(event.billing_amount_cents || 0)} — Desbloquear
           </span>
         </div>
       </div>
@@ -408,6 +413,25 @@ function EventPreview({ event, live }: { event: CallEvent; live?: boolean }) {
       <div className="w-full bg-red-500 rounded-lg py-1.5 text-center">
         <span className="text-white text-[10px] font-bold">{event.button_text || 'Liberar número'}</span>
       </div>
+    </div>
+  );
+
+  if (event.type === 'age_gate') return (
+    <div className="absolute inset-0 bg-black/92 flex flex-col items-center justify-center gap-3 z-20 px-4">
+      {liveTag}
+      <div className="w-14 h-14 rounded-full bg-yellow-500/20 flex items-center justify-center">
+        <Shield className="w-7 h-7 text-yellow-400" />
+      </div>
+      <div className="text-center">
+        <p className="text-white text-[10px] font-bold">🔞 {event.title || 'Conteúdo +18'}</p>
+        <p className="text-gray-400 text-[9px] mt-0.5 text-center leading-tight">{event.description || 'Verificação de maioridade'}</p>
+      </div>
+      <div className="w-full bg-yellow-500 rounded-lg py-1.5 text-center">
+        <span className="text-[#1a1a1a] text-[10px] font-bold">{event.button_text || 'Confirmar maioridade'}</span>
+      </div>
+      {event.billing_amount_cents > 0 && (
+        <p className="text-yellow-400 text-[9px] font-semibold">{formatPrice(event.billing_amount_cents)}</p>
+      )}
     </div>
   );
 
@@ -676,7 +700,8 @@ function EventPropsPanel({ event, onChange, onDelete }: {
   const isTipJar = event.type === 'tip_jar';
   const isVideoLock = event.type === 'video_lock';
   const isPhoneBlock = event.type === 'phone_block';
-  const isAnyBilling = isBilling || isTipJar || isVideoLock || isPhoneBlock;
+  const isAgeGate = event.type === 'age_gate';
+  const isAnyBilling = isBilling || isTipJar || isVideoLock || isPhoneBlock || isAgeGate;
   // tipos que só usam timing (sem título/descrição/botão)
   const isTimingOnly = isSignalDrop || event.type === 'screenshot_alert';
   // tipos que têm título mas não têm botão próprio
@@ -775,7 +800,7 @@ function EventPropsPanel({ event, onChange, onDelete }: {
                 onChange={e => onChange('billing_amount_cents', parseInt(e.target.value) || 0)}
                 className={inputCls} />
               <p className="text-[10px] text-gray-600 mt-1">
-                = {((event.billing_amount_cents ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                = {formatPrice(event.billing_amount_cents ?? 0)}
               </p>
             </Field>
             <Field label="Texto do botão">
@@ -808,7 +833,7 @@ function EventPropsPanel({ event, onChange, onDelete }: {
                 onChange={e => onChange('billing_amount_cents', parseInt(e.target.value) || 0)}
                 className={inputCls} />
               <p className="text-[10px] text-gray-600 mt-1">
-                = {((event.billing_amount_cents ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                = {formatPrice(event.billing_amount_cents ?? 0)}
               </p>
             </Field>
             <Field label="Texto do botão">
@@ -827,7 +852,7 @@ function EventPropsPanel({ event, onChange, onDelete }: {
                 onChange={e => onChange('billing_amount_cents', parseInt(e.target.value) || 0)}
                 className={inputCls} />
               <p className="text-[10px] text-gray-600 mt-1">
-                = {((event.billing_amount_cents ?? 0) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                = {formatPrice(event.billing_amount_cents ?? 0)}
               </p>
             </Field>
             <Field label="Nome do pagador">
@@ -986,6 +1011,7 @@ function defaultPayload(type: string, currentTime: number): UpsertEventPayload {
     case 'tip_jar': return { ...base, title: 'Manda um presente pra ela 🎁', description: 'Escolha um valor e surpreenda', button_text: 'Enviar presente', button_color: '#ec4899', billing_amount_cents: 1000 };
     case 'video_lock': return { ...base, title: 'Vídeo bloqueado', description: 'Continue para desbloquear o momento', button_text: 'Desbloquear', button_color: '#6366f1', billing_amount_cents: 2990 };
     case 'phone_block': return { ...base, title: 'Número bloqueado', description: 'Seu número foi bloqueado temporariamente. Pague para liberar o contato.', button_text: 'Liberar número', button_color: '#ef4444', billing_amount_cents: 4990 };
+    case 'age_gate': return { ...base, title: 'Conteúdo +18', description: 'Para confirmar que você é maior de idade, é necessário realizar uma verificação rápida.', button_text: 'Confirmar maioridade', button_color: '#f59e0b', billing_amount_cents: 990 };
     default: return base;
   }
 }

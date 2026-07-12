@@ -2,10 +2,16 @@ import api from './api';
 
 export interface BillingResult {
   transaction_id: string;
-  zuckpay_txn_id: string;
-  qr_code: string;
-  qr_code_url: string;
-  checkout_url: string;
+  gateway: string;
+  zuckpay_txn_id?: string;
+  waymb_txn_id?: string;
+  waymb_method?: string;
+  multibanco_entity?: string;
+  multibanco_reference?: string;
+  multibanco_expires_at?: number;
+  qr_code?: string;
+  qr_code_url?: string;
+  checkout_url?: string;
   amount_cents: number;
 }
 
@@ -28,7 +34,20 @@ export async function createPixPayment(
   return data.data;
 }
 
-export interface PixStatusResult {
+export async function createWayMBPayment(
+  slug: string,
+  amountCents: number,
+  method: 'mbway' | 'multibanco' | 'bizum',
+  payload: CreatePixPayload,
+): Promise<BillingResult> {
+  const { data } = await api.post<{ data: BillingResult }>(
+    `/public/calls/${slug}/billing/waymb?amount_cents=${amountCents}&method=${method}`,
+    payload,
+  );
+  return data.data;
+}
+
+export interface PaymentStatusResult {
   status: string;
   amount_cents: number;
   paid: boolean;
@@ -37,13 +56,20 @@ export interface PixStatusResult {
 export async function checkPixStatus(
   transactionId: string,
   opts?: { zuckpayTxnId?: string; slug?: string },
-): Promise<PixStatusResult> {
+): Promise<PaymentStatusResult> {
   const params = new URLSearchParams();
   if (opts?.zuckpayTxnId) params.set('zuckpay_txn_id', opts.zuckpayTxnId);
   if (opts?.slug) params.set('slug', opts.slug);
   const qs = params.toString() ? `?${params}` : '';
-  const { data } = await api.get<{ data: PixStatusResult }>(
+  const { data } = await api.get<{ data: PaymentStatusResult }>(
     `/public/billing/transactions/${transactionId}/status${qs}`,
+  );
+  return data.data;
+}
+
+export async function checkWayMBStatus(transactionId: string): Promise<PaymentStatusResult> {
+  const { data } = await api.get<{ data: PaymentStatusResult }>(
+    `/public/billing/transactions/${transactionId}/waymb-status`,
   );
   return data.data;
 }

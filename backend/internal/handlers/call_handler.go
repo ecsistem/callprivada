@@ -387,6 +387,7 @@ func (h *CallHandler) GetPublic(c *gin.Context) {
 			"call_mode":             data.Call.CallMode,
 			"billing_mode":          data.Call.BillingMode,
 			"end_call_redirect_url": data.Call.EndCallRedirectURL,
+			"currency":                 data.Currency,
 			"events":                   evts,
 			"tracking":                 trackingMap,
 		},

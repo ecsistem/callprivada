@@ -70,6 +70,10 @@ func (r *planRepository) FindByID(id uuid.UUID) (*domain.Plan, error) {
 	return &p, nil
 }
 
+func (r *planRepository) Delete(id uuid.UUID) error {
+	return r.db.Delete(&models.Plan{}, "id = ?", id).Error
+}
+
 func (r *planRepository) Update(p *domain.Plan) error {
 	return r.db.Model(&models.Plan{}).Where("id = ?", p.ID).Updates(map[string]interface{}{
 		"name":                   p.Name,

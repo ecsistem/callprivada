@@ -64,10 +64,11 @@ type CallService struct {
 	videos  domain.VideoRepository
 	events  domain.CallEventRepository
 	storage storage.FileStorage
+	configs domain.PaymentConfigRepository
 }
 
-func NewCallService(calls domain.CallRepository, videos domain.VideoRepository, events domain.CallEventRepository, store storage.FileStorage) *CallService {
-	return &CallService{calls: calls, videos: videos, events: events, storage: store}
+func NewCallService(calls domain.CallRepository, videos domain.VideoRepository, events domain.CallEventRepository, store storage.FileStorage, configs domain.PaymentConfigRepository) *CallService {
+	return &CallService{calls: calls, videos: videos, events: events, storage: store, configs: configs}
 }
 
 func (s *CallService) Create(ctx context.Context, userID uuid.UUID, in CreateCallInput) (*domain.Call, error) {
@@ -197,6 +198,7 @@ type PublicCallData struct {
 	Call     *domain.Call
 	VideoURL string
 	Events   []domain.CallEvent
+	Currency string
 }
 
 // CheckCreateLimit verifica se o usuário atingiu o limite de chamadas do plano.
@@ -246,7 +248,14 @@ func (s *CallService) GetPublic(ctx context.Context, slug string) (*PublicCallDa
 		events = []domain.CallEvent{}
 	}
 
-	return &PublicCallData{Call: call, VideoURL: videoURL, Events: events}, nil
+	currency := "BRL"
+	if s.configs != nil {
+		if cfg, err := s.configs.FindByUserID(ctx, call.UserID); err == nil && cfg.Currency != "" {
+			currency = cfg.Currency
+		}
+	}
+
+	return &PublicCallData{Call: call, VideoURL: videoURL, Events: events, Currency: currency}, nil
 }
 
 // UploadImage faz upload de imagem (foto de contato ou thumbnail) e retorna a storage key.

@@ -34,6 +34,12 @@ func (s *Subscription) IsActive() bool {
 	return true
 }
 
+type SubscriptionWithEmail struct {
+	Subscription
+	UserEmail string `json:"user_email"`
+	UserName  string `json:"user_name"`
+}
+
 type SubscriptionRepository interface {
 	Create(sub *Subscription) error
 	Update(sub *Subscription) error
@@ -42,5 +48,6 @@ type SubscriptionRepository interface {
 	FindByAbacatePayID(abacatePayID string) (*Subscription, error)
 	// Admin
 	FindAll(page, perPage int) ([]*Subscription, int64, error)
+	FindAllWithEmail(page, perPage int) ([]*SubscriptionWithEmail, int64, error)
 	CountActive() (int64, error)
 }

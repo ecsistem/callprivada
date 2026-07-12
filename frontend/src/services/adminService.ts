@@ -94,3 +94,16 @@ export async function listAuditLogs(page = 1): Promise<PagedResult<AdminAuditLog
   const res = await api.get('/admin/audit-logs', { params: { page, per_page: 20 } });
   return res.data;
 }
+
+export async function deleteAdminPlan(id: string): Promise<void> {
+  await api.delete(`/admin/plans/${id}`);
+}
+
+export async function impersonateUser(id: string): Promise<{ access_token: string }> {
+  const res = await api.post(`/admin/users/${id}/impersonate`);
+  return res.data;
+}
+
+export async function changeUserPassword(id: string, password: string): Promise<void> {
+  await api.put(`/admin/users/${id}/password`, { password });
+}

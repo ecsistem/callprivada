@@ -3,6 +3,112 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-12b] — Dashboard: filtro por data personalizado; Downsell: bloco de preço e design system
+
+### Backend
+- `domain/billing_transaction.go` — assinatura `GetStatsByUser` recebe `from, to string`.
+- `repositories/billing_transaction_repository.go` — suporte a `period=custom` com `from`/`to`.
+- `services/billing_service.go` — `GetStats` repassa `from`, `to`.
+- `handlers/billing_handler.go` — lê query params `from` e `to`.
+
+### Frontend
+- `services/dashboardService.ts` — `PaymentPeriod` inclui `'custom'`; `getPaymentStats` aceita `from?`, `to?`.
+- `pages/DashboardPage.tsx` — nova tab "Período" com date pickers; cores `#FE015C`.
+- `services/presellService.ts` — campos de preço downsell em `PresellConfig`.
+- `pages/PresellEditorPage.tsx` — design system rosa; bloco preço/desconto para downsell.
+- `pages/PresellPublicPage.tsx` — bloco de comparação de preço no downsell público.
+
+## [2026-07-12] — Admin: delete plano, impersonação, senha, landing dinâmica, design system
+
+### Backend
+- `domain/plan.go` — `Delete` adicionado ao `PlanRepository`.
+- `repositories/plan_repository.go` — `Delete` implementado.
+- `services/subscription_service.go` — `DeletePlan`.
+- `handlers/subscription_handler.go` — `DeletePlan` (DELETE /admin/plans/:id).
+- `services/admin_service.go` — `ImpersonateUser` (gera JWT curto para o usuário) e `ChangeUserPassword`.
+- `handlers/admin_handler.go` — `NewAdminHandler` recebe `*JWTService`; `ImpersonateUser` e `ChangeUserPassword` handlers.
+- `cmd/api/main.go` — novas rotas: `POST /admin/users/:id/impersonate`, `PUT /admin/users/:id/password`, `DELETE /admin/plans/:id`.
+
+### Frontend
+- `services/adminService.ts` — `deleteAdminPlan`, `impersonateUser`, `changeUserPassword`.
+- `pages/AdminPage.tsx` — Planos: botão Excluir com confirmação. Usuários: botão "Acessar" (impersonação redireciona ao dashboard do usuário), botão "Senha" (modal para alterar senha). Botões primários: verde → pink `#FE015C`. Input focus ring: verde → pink.
+- `pages/LandingPage.tsx` — seção Preços agora busca planos via `GET /plans`; cards dinâmicos (skeleton enquanto carrega, último plano recebe badge POPULAR e estilo destaque).
+- `components/AppLayout.tsx` — item ativo da sidebar: verde → pink `#FE015C`; avatar: gradiente verde → gradiente pink.
+- `pages/DashboardPage.tsx` — todos os acentos verdes substituídos por pink `#FE015C` (botão, ícones, banner do plano, checklist, PaymentsPanel).
+
+---
+
+## [2026-07-12] — Dashboard: painel de pagamentos + Admin: email nas assinaturas
+
+### Backend
+- `domain/billing_transaction.go` — `PaymentStats` struct; `GetStatsByUser` adicionado ao `BillingTransactionRepository`.
+- `repositories/billing_transaction_repository.go` — `GetStatsByUser`: JOIN `billing_transactions → calls` por `user_id`, filtro por período (day/month/year/all), contagem geradas + pagas + soma receita.
+- `services/billing_service.go` — `GetStats(ctx, userID, period)` delega ao repo.
+- `handlers/billing_handler.go` — `GetPaymentStats` (GET `/billing/stats?period=`), autenticado.
+- `cmd/api/main.go` — grupo `/billing` autenticado com rota `GET /stats`.
+- `domain/subscription.go` — `SubscriptionWithEmail` struct; `FindAllWithEmail` adicionado ao `SubscriptionRepository`.
+- `repositories/subscription_repository.go` — `FindAllWithEmail`: JOIN com `users` retorna `user_email` e `user_name`.
+- `services/admin_service.go` — `ListSubscriptionsWithEmail`.
+- `handlers/admin_handler.go` — `ListSubscriptions` agora chama `ListSubscriptionsWithEmail`.
+
+### Frontend
+- `services/dashboardService.ts` — `PaymentStats`, `PaymentPeriod`, `getPaymentStats`.
+- `pages/DashboardPage.tsx` — `PaymentsPanel`: card com filtros Hoje/Este mês/Este ano/Total, colunas Gerados/Pagos/Receita, barra de conversão, estado vazio amigável.
+- `pages/AdminPage.tsx` — aba Assinaturas mostra nome e email do usuário em vez de UUID.
+
+---
+
+## [2026-07-12] — Limites de plano: max_videos + wiring VideoHandler
+
+### Backend
+- `backend/internal/domain/video.go` — `CountByUserID` adicionado ao `VideoRepository` interface.
+- `backend/internal/repositories/video_repository.go` — implementação de `CountByUserID`.
+- `backend/internal/services/video_service.go` — `CheckCreateLimit` verifica `max_videos` do plano antes do upload.
+- `backend/internal/handlers/video_handler.go` — `VideoHandler` agora recebe `*SubscriptionService`; `Upload` chama `CheckCreateLimit`.
+- `backend/cmd/api/main.go` — `NewVideoHandler(videoService, subService)` — injeção do `SubscriptionService`.
+
+### Frontend
+- `frontend/src/pages/SubscriptionPage.tsx` — badge "até N vídeos" exibido quando `max_videos > 0`.
+
+---
+
+## [2026-07-12] — Fix signal_drop/screenshot_alert + age_gate + preview /calls/new
+
+### Fixes
+- `pages/CallPublicPage.tsx` — `dismissEvent` e `resumeVideo` envolvidos em `useCallback`; `BILLING_TYPES` movido para fora do componente. Resolve o bug crítico onde `signal_drop` e `screenshot_alert` nunca descartavam o overlay (timers resetavam a cada render causado pelo `useCallTimer`).
+- `pages/NewCallPage.tsx` — `VideoCard` agora envolve `VideoThumbnail` com `stopPropagation` e passa `playInline={true}`, permitindo preview inline do vídeo sem selecionar o card.
+- `components/EventOverlay.tsx` — `age_gate`, `video_lock`, `phone_block`, `tip_jar` excluídos do auto-dismiss global (não devem ser descartados por timer).
+
+### Novo evento: Verificação de Idade (age_gate)
+- `backend/internal/domain/call_event.go` — constante `EventTypeAgeGate = "age_gate"`.
+- `frontend/src/services/eventService.ts` e `callService.ts` — tipo `age_gate` adicionado ao union.
+- `components/EventOverlay.tsx` — `AgeGateOverlay`: overlay +18 com cobrança PIX simbólica para verificação de maioridade; pausa o vídeo até confirmação.
+- `pages/VideoEditorPage.tsx` — preview, ícone, cor, label, help, default e seção de billing para `age_gate`.
+- `pages/TimelineEditorPage.tsx` — `TYPE_META` atualizado com entrada `age_gate`.
+- `pages/CallPublicPage.tsx` — `age_gate` incluído em `BILLING_TYPES` e na lista de eventos que pausam o vídeo e disparam `resumeVideo` após pagamento.
+
+## [2026-07-12] — Propagação de moeda + WayMB completo
+
+### Frontend
+- `lib/currency.ts` (novo) — `CURRENCIES`, `formatPrice(cents, currency)`.
+- `pages/CallPublicPage.tsx` — `EntryPaywall` aceita `currency` prop; `<EventOverlay>` recebe `currency={call.currency}`; importa `formatPrice`.
+- `pages/DashboardPage.tsx`, `pages/SubscriptionPage.tsx`, `pages/AdminPage.tsx`, `pages/VideoEditorPage.tsx` — substituídas todas as formatações BRL hardcoded pela função `formatPrice` compartilhada.
+- `components/EventOverlay.tsx` — `currency` prop propagada para todos os sub-overlays (`PixStep`, `TipJarOverlay`, `VideoLockOverlay`, `PhoneBlockOverlay`, `ReconnectPaywallOverlay`).
+- `pages/PaymentSettingsPage.tsx` — seletor de moeda (BRL, EUR, USD, GBP) + tabs de gateway ZuckPay/WayMB.
+- `components/CreditsOverlay.tsx` — modo `payer` (coleta nome/email/telefone/documento) + modo `method` (MB WAY / Multibanco / Bizum) + modo `waymb` (tela de espera por método).
+- `services/billingService.ts` — `createWayMBPayment`, `checkWayMBStatus`.
+- `services/paymentConfigService.ts` — campos WayMB + `active_gateway` + `currency`.
+- `services/callService.ts` — `PublicCall.currency`.
+
+### Backend
+- `migrations/000032–000034` — colunas WayMB, gateway ativo e moeda em `user_payment_configs`; colunas gateway/WayMB em `billing_transactions`.
+- `internal/waymb/client.go` — cliente HTTP para WayMB API.
+- `internal/domain/`, `internal/models/`, `internal/repositories/` — atualizados com novos campos.
+- `internal/services/billing_service.go` — `CreateWayMBPayment`, `GetWayMBStatus`, `ProcessWayMBWebhook`.
+- `internal/services/call_service.go` — `GetPublic` inclui `currency` do dono.
+- `internal/handlers/billing_handler.go`, `payment_config_handler.go`, `call_handler.go` — novos endpoints WayMB e campos expostos.
+- `cmd/api/main.go` — rotas WayMB registradas.
+
 ## [2026-07-06] — Integração Dracofy por usuário (DB-based)
 
 ### Backend

@@ -5,11 +5,13 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"github.com/callprivada/fwlc-backend/internal/domain"
+	"github.com/callprivada/fwlc-backend/internal/middlewares"
 	"github.com/callprivada/fwlc-backend/internal/services"
 	ws "github.com/callprivada/fwlc-backend/internal/ws"
 )
@@ -48,11 +50,8 @@ func (h *BillingHandler) CreatePIX(c *gin.Context) {
 		// noop — valor abaixo
 	}
 	if a := c.Query("amount_cents"); a != "" {
-		_, _ = (&amountCents), a // parse manual
-		for _, ch := range a {
-			if ch >= '0' && ch <= '9' {
-				amountCents = amountCents*10 + int(ch-'0')
-			}
+		if v, err := strconv.Atoi(a); err == nil && v > 0 {
+			amountCents = v
 		}
 	}
 
@@ -71,6 +70,120 @@ func (h *BillingHandler) CreatePIX(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"data": result})
+}
+
+// CreateWayMBPayment — POST /public/calls/:slug/billing/waymb?amount_cents=N&method=mbway
+func (h *BillingHandler) CreateWayMBPayment(c *gin.Context) {
+	slug := c.Param("slug")
+
+	var req createPixRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "validation_error", "message": err.Error()}})
+		return
+	}
+
+	method := c.Query("method")
+	if method == "" {
+		method = "mbway"
+	}
+
+	var amountCents int
+	if a := c.Query("amount_cents"); a != "" {
+		if v, err := strconv.Atoi(a); err == nil && v > 0 {
+			amountCents = v
+		}
+	}
+
+	result, err := h.billing.CreateWayMBPayment(c.Request.Context(), services.CreateBillingInput{
+		Slug:          slug,
+		PayerName:     req.PayerName,
+		PayerDocument: req.PayerDocument,
+		PayerEmail:    req.PayerEmail,
+		PayerPhone:    req.PayerPhone,
+		AmountCents:   amountCents,
+	}, method)
+	if err != nil {
+		log.Printf("[billing] CreateWayMBPayment error: %v", err)
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"data": result})
+}
+
+// GetWayMBStatus — GET /public/billing/transactions/:id/waymb-status
+func (h *BillingHandler) GetWayMBStatus(c *gin.Context) {
+	txnID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "id inválido"}})
+		return
+	}
+
+	status, amountCents, err := h.billing.GetWayMBStatus(c.Request.Context(), txnID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{
+		"status":       status,
+		"amount_cents": amountCents,
+		"paid":         status == "PAID",
+	}})
+}
+
+// WayMBWebhook processa notificações de pagamento da WayMB.
+func (h *BillingHandler) WayMBWebhook(c *gin.Context) {
+	var payload struct {
+		TransactionID string  `json:"transactionId"`
+		ID            string  `json:"id"`
+		Status        string  `json:"status"`
+		Amount        float64 `json:"amount"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	id := payload.TransactionID
+	if id == "" {
+		id = payload.ID
+	}
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{"ok": false})
+		return
+	}
+
+	result, err := h.billing.ProcessWayMBWebhook(c.Request.Context(), id, payload.Status)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+
+	if result.Status == "PAID" {
+		h.hub.Broadcast(result.CallUserID, "payment_received", map[string]any{
+			"call_title":   result.CallTitle,
+			"amount_cents": result.AmountCents,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// GetPaymentStats — GET /billing/stats?period=day|month|year|all|custom&from=YYYY-MM-DD&to=YYYY-MM-DD (autenticado)
+func (h *BillingHandler) GetPaymentStats(c *gin.Context) {
+	uid := c.MustGet(middlewares.ContextUserIDKey).(uuid.UUID)
+	period := c.DefaultQuery("period", "all")
+	from := c.Query("from")
+	to := c.Query("to")
+
+	stats, err := h.billing.GetStats(c.Request.Context(), uid, period, from, to)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": stats})
 }
 
 // GetPixStatus — GET /public/billing/transactions/:id/status?zuckpay_txn_id=XXX&slug=YYYY

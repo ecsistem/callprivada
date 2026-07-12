@@ -39,5 +39,6 @@ type VideoRepository interface {
 	Update(ctx context.Context, v *Video) error
 	FindByID(ctx context.Context, id uuid.UUID) (*Video, error)
 	FindByUserID(ctx context.Context, userID uuid.UUID) ([]Video, error)
+	CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }

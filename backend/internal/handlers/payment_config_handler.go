@@ -30,13 +30,24 @@ func (h *PaymentConfigHandler) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{
 		"zuckpay_client_id":     cfg.ZuckPayClientID,
 		"zuckpay_client_secret": maskSecret(cfg.ZuckPayClientSecret),
+		"waymb_client_id":       cfg.WayMBClientID,
+		"waymb_client_secret":   maskSecret(cfg.WayMBClientSecret),
+		"waymb_account_email":   cfg.WayMBAccountEmail,
+		"active_gateway":        cfg.Gateway(),
+		"currency":              cfg.Currency,
 		"configured":            cfg.IsConfigured(),
+		"waymb_configured":      cfg.IsWayMBConfigured(),
 	}})
 }
 
 type savePaymentConfigRequest struct {
-	ZuckPayClientID     string `json:"zuckpay_client_id" binding:"required"`
-	ZuckPayClientSecret string `json:"zuckpay_client_secret" binding:"required"`
+	ZuckPayClientID     string `json:"zuckpay_client_id"`
+	ZuckPayClientSecret string `json:"zuckpay_client_secret"`
+	WayMBClientID       string `json:"waymb_client_id"`
+	WayMBClientSecret   string `json:"waymb_client_secret"`
+	WayMBAccountEmail   string `json:"waymb_account_email"`
+	ActiveGateway       string `json:"active_gateway"`
+	Currency            string `json:"currency"`
 }
 
 func (h *PaymentConfigHandler) Save(c *gin.Context) {
@@ -48,7 +59,15 @@ func (h *PaymentConfigHandler) Save(c *gin.Context) {
 		return
 	}
 
-	cfg, err := h.svc.Save(c.Request.Context(), userID, req.ZuckPayClientID, req.ZuckPayClientSecret)
+	cfg, err := h.svc.Save(c.Request.Context(), userID, services.SavePaymentConfigInput{
+		ZuckPayClientID:     req.ZuckPayClientID,
+		ZuckPayClientSecret: req.ZuckPayClientSecret,
+		WayMBClientID:       req.WayMBClientID,
+		WayMBClientSecret:   req.WayMBClientSecret,
+		WayMBAccountEmail:   req.WayMBAccountEmail,
+		ActiveGateway:       req.ActiveGateway,
+		Currency:            req.Currency,
+	})
 	if err != nil {
 		respondError(c, err)
 		return
@@ -57,7 +76,13 @@ func (h *PaymentConfigHandler) Save(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{
 		"zuckpay_client_id":     cfg.ZuckPayClientID,
 		"zuckpay_client_secret": maskSecret(cfg.ZuckPayClientSecret),
+		"waymb_client_id":       cfg.WayMBClientID,
+		"waymb_client_secret":   maskSecret(cfg.WayMBClientSecret),
+		"waymb_account_email":   cfg.WayMBAccountEmail,
+		"active_gateway":        cfg.Gateway(),
+		"currency":              cfg.Currency,
 		"configured":            cfg.IsConfigured(),
+		"waymb_configured":      cfg.IsWayMBConfigured(),
 	}})
 }
 
