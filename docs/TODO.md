@@ -332,3 +332,5 @@ Regras:
 - [x] WayMB: fluxo invertido (método → formulário), NIF e todos os campos obrigatórios, mensagens de erro detalhadas da API (`EventOverlay.tsx`, `CreditsOverlay.tsx`).
 - [x] WayMB Multibanco: gera direto sem formulário de dados (payer com placeholders — a referência não depende do pagador); MB WAY continua exigindo os dados (`EventOverlay.tsx`, `CreditsOverlay.tsx`).
 - [x] Fix: `age_gate` faltava no mapa `validEventTypes` do `call_event_service.go` — criação do evento "Verificação de idade" era rejeitada ("tipo de evento inválido"). Pendente: rebuild do container backend (tracking fix + este).
+- [x] Fix presell: horários (botões) deletados reapareciam ao reabrir o editor — o load só aplicava `slot_labels` salvos quando a lista não era vazia (`PresellEditorPage.tsx`).
+- [x] Pixels: `InitiateCheckout` disparado ao chegar na tela de pagamento e `Purchase` ao confirmar o pagamento (Meta/TikTok/GA4/GTM) — `useTrackingScripts.ts` (`trackPixelEvent`), `EventOverlay.tsx`, `CreditsOverlay.tsx`.

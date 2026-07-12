@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { checkPixStatus, checkWayMBStatus, createPixPayment, createWayMBPayment } from '../services/billingService';
 import { getPaymentConfig } from '../services/paymentConfigService';
+import { trackPixelEvent } from '../hooks/useTrackingScripts';
 import { PhoneInput } from './PhoneInput';
 
 export interface CreditPackage {
@@ -72,10 +73,13 @@ export default function CreditsOverlay({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const warningFiredRef = useRef(false);
 
+  const currencyRef = useRef('BRL');
+
   // Carrega gateway ativo do usuário via config da chamada
   useEffect(() => {
     getPaymentConfig().then(cfg => {
       setActiveGateway(cfg.active_gateway ?? 'zuckpay');
+      if (cfg.currency) currencyRef.current = cfg.currency;
     }).catch(() => {});
   }, []);
 
@@ -112,6 +116,7 @@ export default function CreditsOverlay({
         const s = gateway === 'waymb' ? await checkWayMBStatus(id) : await checkPixStatus(id);
         if (s.paid) {
           stopPolling();
+          trackPixelEvent('Purchase', { amountCents: s.amount_cents, currency: currencyRef.current });
           const pkg = CREDIT_PACKAGES.find(p => p.price_cents === s.amount_cents) ?? selected;
           setCreditsSeconds(prev => prev + pkg.minutes * 60);
           warningFiredRef.current = false;
@@ -125,6 +130,8 @@ export default function CreditsOverlay({
   useEffect(() => () => { stopPolling(); if (timerRef.current) clearInterval(timerRef.current); }, []);
 
   async function generatePix(pkg: CreditPackage) {
+    // InitiateCheckout — lead escolheu um pacote e entrou no fluxo de pagamento.
+    trackPixelEvent('InitiateCheckout', { amountCents: pkg.price_cents, currency: currencyRef.current });
     if (activeGateway === 'waymb') {
       setSelected(pkg);
       setErrMsg('');
@@ -201,6 +208,7 @@ export default function CreditsOverlay({
       const s = activeGateway === 'waymb' ? await checkWayMBStatus(txnId) : await checkPixStatus(txnId);
       if (s.paid) {
         stopPolling();
+        trackPixelEvent('Purchase', { amountCents: s.amount_cents, currency: currencyRef.current });
         const pkg = CREDIT_PACKAGES.find(p => p.price_cents === s.amount_cents) ?? selected;
         setCreditsSeconds(prev => prev + pkg.minutes * 60);
         warningFiredRef.current = false;

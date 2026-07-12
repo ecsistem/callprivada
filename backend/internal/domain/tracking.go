@@ -16,6 +16,7 @@ type UserTrackingConfig struct {
 	GTMContainerID    string    `json:"gtm_container_id"`
 	UTMifyToken       string    `json:"utmify_token"`
 	DracofyToken      string    `json:"dracofy_token"`
+	ClarityProjectID  string    `json:"clarity_project_id"`
 	CustomHeadScript  string    `json:"custom_head_script"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`

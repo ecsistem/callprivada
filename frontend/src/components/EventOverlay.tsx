@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { formatPrice } from '../lib/currency';
 import { checkPixStatus, checkWayMBStatus, createPixPayment, createWayMBPayment, type BillingResult } from '../services/billingService';
 import type { PublicEvent } from '../services/callService';
+import { trackPixelEvent } from '../hooks/useTrackingScripts';
 import { PhoneInput } from './PhoneInput';
 
 function useQRCode(text: string | undefined) {
@@ -85,6 +86,22 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
   useEffect(() => {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
+
+  // InitiateCheckout — lead chegou na tela de pagamento (uma vez por overlay).
+  useEffect(() => {
+    trackPixelEvent('InitiateCheckout', { amountCents: event.billing_amount_cents, currency });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Purchase — pagamento confirmado (uma vez).
+  const purchaseFiredRef = useRef(false);
+  useEffect(() => {
+    if (step === 'paid' && !purchaseFiredRef.current) {
+      purchaseFiredRef.current = true;
+      trackPixelEvent('Purchase', { amountCents: result?.amount_cents ?? event.billing_amount_cents, currency });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   // Disparo automático — apenas PIX sem formulário. WayMB sempre passa por
   // formulário de dados + escolha de método antes de criar a cobrança.

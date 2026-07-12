@@ -150,9 +150,9 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
       setConfig(existing.config);
       const labels = existing.config.slot_labels ?? [];
       const avail = existing.config.slot_availability ?? labels.map(() => true);
-      if (labels.length > 0) {
-        setSlotRows(labels.map((label, i) => ({ label, available: avail[i] ?? true })));
-      }
+      // Sempre espelha o que foi salvo — inclusive lista vazia (horários
+      // deletados não podem reaparecer como as 3 linhas padrão).
+      setSlotRows(labels.map((label, i) => ({ label, available: avail[i] ?? true })));
       if (existing.config.avatar_url) avatarUpload.setServerUrl(existing.config.avatar_url);
       if (existing.config.bg_image_url) bgImageUpload.setServerUrl(existing.config.bg_image_url);
     }

@@ -3,6 +3,18 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-12m] — Pixels: InitiateCheckout e Purchase nos pontos corretos
+
+### Frontend
+- `hooks/useTrackingScripts.ts` — novo `trackPixelEvent('InitiateCheckout'|'Purchase', {amountCents, currency})`: dispara em todos os pixels carregados — Meta (`fbq`), TikTok (`ttq`, Purchase → `CompletePayment`), GA4 (`gtag`, `begin_checkout`/`purchase`) e GTM (`dataLayer.push`). Nunca lança erro (não pode quebrar o checkout).
+- `EventOverlay.tsx` (`PixStep`) — `InitiateCheckout` ao montar a tela de pagamento (1× por overlay) e `Purchase` quando o status vira pago (1×, com o valor real da transação).
+- `CreditsOverlay.tsx` — `InitiateCheckout` ao escolher um pacote de minutos; `Purchase` na confirmação (polling e verificação manual). Moeda vem do `getPaymentConfig()`.
+
+## [2026-07-12l] — Fix: botões de horário do presell não eram deletados
+
+### Frontend
+- `PresellEditorPage.tsx` — ao carregar um presell existente, o editor só aplicava os `slot_labels` salvos quando a lista era não-vazia; com zero horários salvos, as 3 linhas padrão reapareciam (e um novo save as re-gravava). Agora o estado espelha sempre o que foi salvo, inclusive lista vazia.
+
 ## [2026-07-12k] — Fix: evento "Verificação de idade" não era criado
 
 ### Backend

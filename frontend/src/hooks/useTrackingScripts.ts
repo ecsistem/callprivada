@@ -36,6 +36,39 @@ function injectSrcScript(id: string, src: string) {
   document.head.appendChild(s);
 }
 
+type PixelEvent = 'InitiateCheckout' | 'Purchase';
+
+interface PixelWindow {
+  fbq?: (...args: unknown[]) => void;
+  ttq?: { track: (event: string, params?: Record<string, unknown>) => void };
+  gtag?: (...args: unknown[]) => void;
+  dataLayer?: unknown[];
+}
+
+/**
+ * Dispara um evento de conversão em todos os pixels carregados na página.
+ * - InitiateCheckout: lead chegou na tela de pagamento.
+ * - Purchase: pagamento confirmado.
+ */
+export function trackPixelEvent(event: PixelEvent, opts: { amountCents: number; currency?: string }) {
+  const w = window as PixelWindow;
+  const value = opts.amountCents / 100;
+  const currency = opts.currency || 'BRL';
+
+  try {
+    // Meta Pixel
+    w.fbq?.('track', event, { value, currency });
+    // TikTok — Purchase equivale a CompletePayment
+    w.ttq?.track(event === 'Purchase' ? 'CompletePayment' : 'InitiateCheckout', {
+      value, currency, content_type: 'product',
+    });
+    // GA4
+    w.gtag?.('event', event === 'Purchase' ? 'purchase' : 'begin_checkout', { value, currency });
+    // GTM dataLayer (para triggers customizados)
+    w.dataLayer?.push({ event: event === 'Purchase' ? 'purchase' : 'begin_checkout', value, currency });
+  } catch { /* pixels nunca devem quebrar o checkout */ }
+}
+
 export function useTrackingScripts(tracking?: TrackingConfig | null) {
   useEffect(() => {
     if (!tracking) return;
