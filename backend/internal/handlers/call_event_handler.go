@@ -20,61 +20,61 @@ func NewCallEventHandler(events *services.CallEventService) *CallEventHandler {
 }
 
 type eventDTO struct {
-	ID                   string `json:"id"`
-	CallID               string `json:"call_id"`
-	TriggerAtSeconds     int    `json:"trigger_at_seconds"`
-	DurationSeconds      int    `json:"duration_seconds"`
-	Type                 string `json:"type"`
-	Title                string `json:"title"`
-	Description          string `json:"description"`
-	ImageKey             string `json:"image_key,omitempty"`
-	ButtonText           string `json:"button_text,omitempty"`
-	ButtonColor          string `json:"button_color,omitempty"`
-	OfferCallSlug        string `json:"offer_call_slug,omitempty"`
-	UpsellSlug           string `json:"upsell_slug,omitempty"`
+	ID                      string `json:"id"`
+	CallID                  string `json:"call_id"`
+	TriggerAtSeconds        int    `json:"trigger_at_seconds"`
+	DurationSeconds         int    `json:"duration_seconds"`
+	Type                    string `json:"type"`
+	Title                   string `json:"title"`
+	Description             string `json:"description"`
+	ImageKey                string `json:"image_key,omitempty"`
+	ButtonText              string `json:"button_text,omitempty"`
+	ButtonColor             string `json:"button_color,omitempty"`
+	OfferCallSlug           string `json:"offer_call_slug,omitempty"`
+	UpsellSlug              string `json:"upsell_slug,omitempty"`
 	BillingAmountCents      int    `json:"billing_amount_cents"`
 	BillingCollectPayerInfo bool   `json:"billing_collect_payer_info"`
 	BillingPayerName        string `json:"billing_payer_name,omitempty"`
 	BillingPayerDocument    string `json:"billing_payer_document,omitempty"`
 	BillingPayerEmail       string `json:"billing_payer_email,omitempty"`
 	BillingPayerPhone       string `json:"billing_payer_phone,omitempty"`
-	CreatedAt            string `json:"created_at"`
+	CreatedAt               string `json:"created_at"`
 }
 
 func toEventDTO(e *domain.CallEvent) eventDTO {
 	return eventDTO{
-		ID:                   e.ID.String(),
-		CallID:               e.CallID.String(),
-		TriggerAtSeconds:     e.TriggerAtSeconds,
-		DurationSeconds:      e.DurationSeconds,
-		Type:                 e.Type,
-		Title:                e.Title,
-		Description:          e.Description,
-		ImageKey:             e.ImageKey,
-		ButtonText:           e.ButtonText,
-		ButtonColor:          e.ButtonColor,
-		OfferCallSlug:        e.OfferCallSlug,
-		UpsellSlug:           e.UpsellSlug,
+		ID:                      e.ID.String(),
+		CallID:                  e.CallID.String(),
+		TriggerAtSeconds:        e.TriggerAtSeconds,
+		DurationSeconds:         e.DurationSeconds,
+		Type:                    e.Type,
+		Title:                   e.Title,
+		Description:             e.Description,
+		ImageKey:                e.ImageKey,
+		ButtonText:              e.ButtonText,
+		ButtonColor:             e.ButtonColor,
+		OfferCallSlug:           e.OfferCallSlug,
+		UpsellSlug:              e.UpsellSlug,
 		BillingAmountCents:      e.BillingAmountCents,
 		BillingCollectPayerInfo: e.BillingCollectPayerInfo,
 		BillingPayerName:        e.BillingPayerName,
 		BillingPayerDocument:    e.BillingPayerDocument,
 		BillingPayerEmail:       e.BillingPayerEmail,
 		BillingPayerPhone:       e.BillingPayerPhone,
-		CreatedAt:            e.CreatedAt.Format(time.RFC3339),
+		CreatedAt:               e.CreatedAt.Format(time.RFC3339),
 	}
 }
 
 type upsertEventRequest struct {
-	TriggerAtSeconds     int    `json:"trigger_at_seconds" binding:"min=0"`
-	DurationSeconds      int    `json:"duration_seconds" binding:"min=0"`
-	Type                 string `json:"type" binding:"required,oneof=popup fullscreen fake_billing offer_call countdown upsell reconnect_paywall signal_drop fake_typing screenshot_alert battery_low incoming_call fake_gift viewer_count social_proof exclusive_access tip_jar video_lock phone_block"`
-	Title                string `json:"title" binding:"required,min=1,max=255"`
-	Description          string `json:"description"`
-	ButtonText           string `json:"button_text" binding:"max=100"`
-	ButtonColor          string `json:"button_color" binding:"max=7"`
-	OfferCallSlug        string `json:"offer_call_slug" binding:"max=255"`
-	UpsellSlug           string `json:"upsell_slug" binding:"max=20"`
+	TriggerAtSeconds        int    `json:"trigger_at_seconds" binding:"min=0"`
+	DurationSeconds         int    `json:"duration_seconds" binding:"min=0"`
+	Type                    string `json:"type" binding:"required,oneof=popup fullscreen fake_billing offer_call countdown upsell reconnect_paywall signal_drop fake_typing screenshot_alert battery_low incoming_call fake_gift viewer_count social_proof exclusive_access tip_jar video_lock phone_block age_gate"`
+	Title                   string `json:"title" binding:"required,min=1,max=255"`
+	Description             string `json:"description"`
+	ButtonText              string `json:"button_text" binding:"max=100"`
+	ButtonColor             string `json:"button_color" binding:"max=7"`
+	OfferCallSlug           string `json:"offer_call_slug" binding:"max=255"`
+	UpsellSlug              string `json:"upsell_slug" binding:"max=20"`
 	BillingAmountCents      int    `json:"billing_amount_cents" binding:"min=0"`
 	BillingCollectPayerInfo bool   `json:"billing_collect_payer_info"`
 	BillingPayerName        string `json:"billing_payer_name"`
@@ -98,13 +98,13 @@ func (h *CallEventHandler) Create(c *gin.Context) {
 	}
 
 	event, err := h.events.Create(c.Request.Context(), uid, callID, services.CreateEventInput{
-		TriggerAtSeconds:     req.TriggerAtSeconds,
-		DurationSeconds:      req.DurationSeconds,
-		Type:                 req.Type,
-		Title:                req.Title,
-		Description:          req.Description,
-		ButtonText:           req.ButtonText,
-		ButtonColor:          req.ButtonColor,
+		TriggerAtSeconds:        req.TriggerAtSeconds,
+		DurationSeconds:         req.DurationSeconds,
+		Type:                    req.Type,
+		Title:                   req.Title,
+		Description:             req.Description,
+		ButtonText:              req.ButtonText,
+		ButtonColor:             req.ButtonColor,
 		OfferCallSlug:           req.OfferCallSlug,
 		UpsellSlug:              req.UpsellSlug,
 		BillingAmountCents:      req.BillingAmountCents,
@@ -157,13 +157,13 @@ func (h *CallEventHandler) Update(c *gin.Context) {
 	}
 
 	event, err := h.events.Update(c.Request.Context(), uid, eventID, services.CreateEventInput{
-		TriggerAtSeconds:     req.TriggerAtSeconds,
-		DurationSeconds:      req.DurationSeconds,
-		Type:                 req.Type,
-		Title:                req.Title,
-		Description:          req.Description,
-		ButtonText:           req.ButtonText,
-		ButtonColor:          req.ButtonColor,
+		TriggerAtSeconds:        req.TriggerAtSeconds,
+		DurationSeconds:         req.DurationSeconds,
+		Type:                    req.Type,
+		Title:                   req.Title,
+		Description:             req.Description,
+		ButtonText:              req.ButtonText,
+		ButtonColor:             req.ButtonColor,
 		OfferCallSlug:           req.OfferCallSlug,
 		UpsellSlug:              req.UpsellSlug,
 		BillingAmountCents:      req.BillingAmountCents,

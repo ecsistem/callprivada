@@ -3,6 +3,14 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-12e] — Editor de eventos: whitelist do backend para `age_gate`
+
+### Backend
+- `backend/internal/handlers/call_event_handler.go` — a validação do campo `type` passou a aceitar `age_gate`.
+
+### Validação
+- `go test ./internal/handlers` — ok.
+
 ## [2026-07-12d] — Pagamentos públicos: switch automático para WayMB
 
 ### Backend
