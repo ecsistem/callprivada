@@ -59,6 +59,7 @@ export interface PublicCall {
   billing_mode?: 'none' | 'credits';
   end_call_redirect_url?: string;
   currency?: string;
+  active_gateway?: 'zuckpay' | 'waymb';
   events: PublicEvent[];
   tracking?: import('./trackingService').TrackingConfig;
 }

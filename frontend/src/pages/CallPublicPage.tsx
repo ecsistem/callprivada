@@ -1,19 +1,19 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
 import {
   Mic, MicOff,
-  Video, VideoOff,
-  PhoneOff,
-  Volume2, VolumeOff,
-  SmilePlus,
   Phone,
+  PhoneOff,
+  SmilePlus,
+  Video, VideoOff,
+  Volume2, VolumeOff,
 } from 'lucide-react';
-import { getPublicCall, type PublicCall, type PublicEvent } from '../services/callService';
-import { EventOverlay } from '../components/EventOverlay';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import CreditsOverlay from '../components/CreditsOverlay';
-import { trackVisit, updateWatched } from '../services/visitService';
+import { EventOverlay } from '../components/EventOverlay';
 import { useTrackingScripts } from '../hooks/useTrackingScripts';
 import { formatPrice } from '../lib/currency';
+import { getPublicCall, type PublicCall, type PublicEvent } from '../services/callService';
+import { trackVisit, updateWatched } from '../services/visitService';
 
 /* ─── Status bar fake (hora, sinal, bateria) ───────────────────────────── */
 
@@ -89,14 +89,16 @@ function FloatingReaction({ emoji, x }: { emoji: string; x: number }) {
 
 /* ─── Paywall de continuação ────────────────────────────────────────────── */
 
-function EntryPaywall({ displayName, photoUrl, priceCents, currency = 'BRL', onPay }: {
+function EntryPaywall({ displayName, photoUrl, priceCents, currency = 'BRL', gateway = 'zuckpay', onPay }: {
   displayName: string;
   photoUrl?: string;
   priceCents: number;
   currency?: string;
+  gateway?: 'zuckpay' | 'waymb';
   onPay: () => void;
 }) {
   const brl = formatPrice(priceCents, currency);
+  const gatewayLabel = gateway === 'waymb' ? 'WayMB' : 'PIX';
   return (
     <div
       className="fixed inset-0 flex flex-col"
@@ -176,7 +178,7 @@ function EntryPaywall({ displayName, photoUrl, priceCents, currency = 'BRL', onP
             boxShadow: '0 4px 20px rgba(37,211,102,0.4)',
           }}
         >
-          Pagar {brl} via PIX agora
+          Pagar {brl} via {gatewayLabel} agora
         </button>
 
         <div className="flex items-center gap-1.5">
@@ -779,7 +781,7 @@ export default function CallPublicPage() {
 
     const interval = setInterval(checkEvents, 250);
     return () => clearInterval(interval);
-  }, [state]);
+  }, [state, slug]);
 
     const dismissEvent = useCallback(() => {
     if (activeEvent && BILLING_TYPES.includes(activeEvent.type)) {
@@ -910,6 +912,7 @@ export default function CallPublicPage() {
         photoUrl={call.contact_photo_url}
         priceCents={call.entry_price_cents}
         currency={call.currency}
+        gateway={call.active_gateway}
         onPay={() => {
           if (slug) localStorage.setItem(`callprivada_paid_${slug}`, '1');
           setPaymentDone(true);
@@ -1147,6 +1150,7 @@ export default function CallPublicPage() {
           onDismiss={dismissEvent}
           onResume={['reconnect_paywall', 'fake_billing', 'video_lock', 'phone_block', 'tip_jar', 'age_gate'].includes(activeEvent.type) ? resumeVideo : undefined}
           currency={call.currency}
+          paymentGateway={call.active_gateway}
         />
       )}
 

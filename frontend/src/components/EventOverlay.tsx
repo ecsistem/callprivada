@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import QRCode from 'qrcode';
-import { createPixPayment, checkPixStatus, type BillingResult } from '../services/billingService';
-import type { PublicEvent } from '../services/callService';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { formatPrice } from '../lib/currency';
+import { checkPixStatus, checkWayMBStatus, createPixPayment, createWayMBPayment, type BillingResult } from '../services/billingService';
+import type { PublicEvent } from '../services/callService';
 
 function useQRCode(text: string | undefined) {
   const [dataUrl, setDataUrl] = useState<string>('');
@@ -22,12 +22,13 @@ interface Props {
   onDismiss: () => void;
   onResume?: () => void;
   currency?: string;
+  paymentGateway?: 'zuckpay' | 'waymb';
 }
 
 /* ─── PIX QR code step ─────────────────────────────────────────────────── */
 
 
-function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: string; event: PublicEvent; onDismiss: () => void; onPaid?: () => void; currency?: string }) {
+function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGateway = 'zuckpay' }: { slug: string; event: PublicEvent; onDismiss: () => void; onPaid?: () => void; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
   const hasPreset =
     !!event.billing_payer_name &&
     !!event.billing_payer_document &&
@@ -49,12 +50,15 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
   const [phone, setPhone] = useState(event.billing_payer_phone ?? '');
 
   const qrDataUrl = useQRCode(result?.qr_code);
+  const isWayMB = paymentGateway === 'waymb';
+  const gatewayName = isWayMB ? 'WayMB' : 'PIX';
+  const isMultibanco = isWayMB && result?.waymb_method === 'multibanco' && (result.multibanco_entity || result.multibanco_reference);
 
   function startPolling(txnId: string, zuckpayTxnId?: string) {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const s = await checkPixStatus(txnId, { zuckpayTxnId, slug });
+        const s = isWayMB ? await checkWayMBStatus(txnId) : await checkPixStatus(txnId, { zuckpayTxnId, slug });
         if (s.paid) {
           clearInterval(pollRef.current!);
           pollRef.current = null;
@@ -73,6 +77,18 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
   // Disparo automático — sempre que não há formulário a preencher.
   useEffect(() => {
     if (showForm) return;
+    if (isWayMB) {
+      createWayMBPayment(slug, event.billing_amount_cents, 'mbway', {
+        payer_name:     event.billing_payer_name     || 'Visitante',
+        payer_document: event.billing_payer_document || '00000000000',
+        payer_email:    event.billing_payer_email    || 'lead@callprivada.app',
+        payer_phone:    event.billing_payer_phone    || '',
+      })
+        .then((r) => { setResult(r); setStep('qr'); startPolling(r.transaction_id); })
+        .catch(() => { setErrMsg('Não foi possível gerar o pagamento WayMB. Tente novamente.'); setStep('error'); });
+      return;
+    }
+
     createPixPayment(slug, event.billing_amount_cents, {
       payer_name:     event.billing_payer_name     || 'Visitante',
       payer_document: event.billing_payer_document || '00000000000',
@@ -88,17 +104,24 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
     e.preventDefault();
     setStep('loading');
     try {
-      const r = await createPixPayment(slug, event.billing_amount_cents, {
-        payer_name: name,
-        payer_document: doc,
-        payer_email: email,
-        payer_phone: phone,
-      });
+      const r = isWayMB
+        ? await createWayMBPayment(slug, event.billing_amount_cents, 'mbway', {
+            payer_name: name,
+            payer_document: doc,
+            payer_email: email,
+            payer_phone: phone,
+          })
+        : await createPixPayment(slug, event.billing_amount_cents, {
+            payer_name: name,
+            payer_document: doc,
+            payer_email: email,
+            payer_phone: phone,
+          });
       setResult(r);
       setStep('qr');
       startPolling(r.transaction_id, r.zuckpay_txn_id);
     } catch {
-      setErrMsg('Não foi possível gerar o PIX. Tente novamente.');
+      setErrMsg(`Não foi possível gerar o pagamento ${gatewayName}. Tente novamente.`);
       setStep('error');
     }
   }
@@ -107,7 +130,9 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
     if (!result) return;
     setStep('checking');
     try {
-      const s = await checkPixStatus(result.transaction_id, { zuckpayTxnId: result.zuckpay_txn_id, slug });
+      const s = isWayMB
+        ? await checkWayMBStatus(result.transaction_id)
+        : await checkPixStatus(result.transaction_id, { zuckpayTxnId: result.zuckpay_txn_id, slug });
       if (s.paid) {
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
         setStep('paid');
@@ -133,7 +158,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-400 text-sm">Gerando cobrança PIX…</p>
+        <p className="text-gray-400 text-sm">Gerando cobrança {gatewayName}…</p>
       </div>
     );
   }
@@ -191,11 +216,37 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
         {/* Valor */}
         <div className="text-center">
           <p className="text-3xl font-black text-white tracking-tight">{formatPrice(result.amount_cents, currency)}</p>
-          <p className="text-gray-400 text-xs mt-0.5">Pagamento via PIX • instantâneo</p>
+          <p className="text-gray-400 text-xs mt-0.5">Pagamento via {gatewayName} • instantâneo</p>
         </div>
 
-        {/* QR code gerado localmente a partir do código PIX */}
-        {qrDataUrl ? (
+        {/* WayMB multibanco ou QR code PIX */}
+        {isMultibanco ? (
+          <div className="w-full space-y-3">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-white/5 rounded-lg p-3">
+                  <p className="text-gray-500 text-xs mb-1">Entidade</p>
+                  <p className="text-white font-mono font-bold text-lg">{result.multibanco_entity}</p>
+                </div>
+                <div className="bg-white/5 rounded-lg p-3">
+                  <p className="text-gray-500 text-xs mb-1">Referência</p>
+                  <p className="text-white font-mono font-bold text-base tracking-wider">{result.multibanco_reference}</p>
+                </div>
+              </div>
+              {result.multibanco_expires_at ? (
+                <p className="text-gray-500 text-xs text-center">
+                  Expira em {new Date(result.multibanco_expires_at * 1000).toLocaleString('pt-BR')}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : isWayMB ? (
+          <div className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2">
+            <div className="text-3xl">📱</div>
+            <p className="text-white font-semibold text-sm">Aprovação enviada para o app WayMB</p>
+            <p className="text-gray-500 text-xs leading-relaxed">Abra o aplicativo WayMB e confirme o pagamento de {formatPrice(result.amount_cents, currency)}.</p>
+          </div>
+        ) : qrDataUrl ? (
           <div className="rounded-2xl bg-white p-3 shadow-lg shadow-black/40">
             <img
               src={qrDataUrl}
@@ -216,7 +267,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
         ) : null}
 
         {/* Código copia-e-cola */}
-        {result.qr_code && (
+        {!isWayMB && result.qr_code && (
           <div className="w-full">
             <p className="text-xs text-gray-500 text-center mb-2">Ou use o código PIX copia e cola</p>
 
@@ -255,6 +306,13 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL' }: { slug: s
                 </>
               )}
             </button>
+          </div>
+        )}
+
+        {isWayMB && !isMultibanco && (
+          <div className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2">
+            <p className="text-white font-semibold text-sm">Aguardando confirmação no WayMB</p>
+            <p className="text-gray-500 text-xs leading-relaxed">Quando o pagamento for aprovado, este overlay será liberado automaticamente.</p>
           </div>
         )}
 
@@ -507,7 +565,7 @@ function SignalDropOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss
 
 /* ─── Reconnect Paywall Overlay ─────────────────────────────────────────── */
 
-function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; slug: string; currency?: string }) {
+function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', paymentGateway = 'zuckpay' }: { event: PublicEvent; onDismiss: () => void; slug: string; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
   type Phase = 'lost' | 'trying' | 'failed' | 'payment';
   const [phase, setPhase] = useState<Phase>('lost');
   const [attempt, setAttempt] = useState(0);
@@ -598,7 +656,7 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL' }: {
         >
           {event.button_text || 'Restaurar chamada'}
         </button>
-        <p className="text-gray-600 text-xs text-center">🔒 Pagamento seguro via PIX</p>
+        <p className="text-gray-600 text-xs text-center">🔒 Pagamento seguro via WayMB</p>
       </div>
     );
   }
@@ -615,10 +673,10 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL' }: {
         </div>
         <div>
           <span className="text-white font-semibold text-sm">Restaurar chamada</span>
-          <p className="text-[#8696a0] text-xs">Pagamento via PIX</p>
+          <p className="text-[#8696a0] text-xs">Pagamento via WayMB</p>
         </div>
       </div>
-      <PixStep slug={slug} event={event} onDismiss={onDismiss} currency={currency} />
+      <PixStep slug={slug} event={event} onDismiss={onDismiss} currency={currency} paymentGateway={paymentGateway} />
     </div>
   );
 }
@@ -900,7 +958,7 @@ function ExclusiveAccessOverlay({ event, onDismiss }: { event: PublicEvent; onDi
 
 /* ─── Tip Jar ───────────────────────────────────────────────────────────── */
 
-function TipJarOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
+function TipJarOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', paymentGateway = 'zuckpay' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
   const [selected, setSelected] = useState<number | null>(null);
   const base = event.billing_amount_cents || 1000;
   const amounts = [base, base * 2, base * 5, base * 10];
@@ -915,7 +973,7 @@ function TipJarOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: {
           <svg viewBox="0 0 24 24" fill={btnColor} className="w-5 h-5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
           <span className="text-white font-semibold text-sm">{event.title || 'Presente 🎁'}</span>
         </div>
-        <PixStep slug={slug} event={fakeEvent} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
+        <PixStep slug={slug} event={fakeEvent} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
       </div>
     );
   }
@@ -954,7 +1012,7 @@ function TipJarOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: {
 
 /* ─── Video Lock ────────────────────────────────────────────────────────── */
 
-function VideoLockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
+function VideoLockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', paymentGateway = 'zuckpay' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
   const [paying, setPaying] = useState(false);
   const btnColor = event.button_color ?? '#6366f1';
 
@@ -965,7 +1023,7 @@ function VideoLockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }
           <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
           <span className="text-white font-semibold text-sm">Desbloquear vídeo</span>
         </div>
-        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
+        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
       </div>
     );
   }
@@ -997,7 +1055,7 @@ function VideoLockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }
 
 /* ─── Phone Block ───────────────────────────────────────────────────────── */
 
-function PhoneBlockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
+function PhoneBlockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', paymentGateway = 'zuckpay' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
   const [paying, setPaying] = useState(false);
   const btnColor = event.button_color ?? '#ef4444';
 
@@ -1008,7 +1066,7 @@ function PhoneBlockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' 
           <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" transform="rotate(45 12 12)"/></svg>
           <span className="text-white font-semibold text-sm">Liberar número</span>
         </div>
-        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
+        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
       </div>
     );
   }
@@ -1042,7 +1100,7 @@ function PhoneBlockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' 
 
 /* ─── Age Gate Overlay ──────────────────────────────────────────────────── */
 
-function AgeGateOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string }) {
+function AgeGateOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', paymentGateway = 'zuckpay' }: { event: PublicEvent; onDismiss: () => void; onResume?: () => void; slug: string; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
   const [paying, setPaying] = useState(false);
 
   if (paying) {
@@ -1052,7 +1110,7 @@ function AgeGateOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: 
           <span className="text-xl">🔞</span>
           <span className="text-white font-semibold text-sm">Verificação de maioridade</span>
         </div>
-        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
+        <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
       </div>
     );
   }
@@ -1094,7 +1152,7 @@ function AgeGateOverlay({ event, onDismiss, onResume, slug, currency = 'BRL' }: 
 
 /* ─── Componente principal ──────────────────────────────────────────────── */
 
-export function EventOverlay({ event, onDismiss, onResume, currency = 'BRL' }: Props) {
+export function EventOverlay({ event, onDismiss, onResume, currency = 'BRL', paymentGateway = 'zuckpay' }: Props) {
   // Para billing, precisamos do slug da URL para chamar a API pública.
   const { slug } = useParams<{ slug: string }>();
   const btnColor = event.button_color ?? '#25d366';
@@ -1117,7 +1175,7 @@ export function EventOverlay({ event, onDismiss, onResume, currency = 'BRL' }: P
   }
 
   if (event.type === 'reconnect_paywall') {
-    return <ReconnectPaywallOverlay event={event} onDismiss={handleDismiss} slug={slug ?? ''} currency={currency} />;
+    return <ReconnectPaywallOverlay event={event} onDismiss={handleDismiss} slug={slug ?? ''} currency={currency} paymentGateway={paymentGateway} />;
   }
 
   if (event.type === 'countdown') {
@@ -1207,22 +1265,22 @@ export function EventOverlay({ event, onDismiss, onResume, currency = 'BRL' }: P
   }
 
   if (event.type === 'tip_jar') {
-    return <TipJarOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
+    return <TipJarOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} paymentGateway={paymentGateway} />;
   }
 
   if (event.type === 'video_lock') {
-    return <VideoLockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
+    return <VideoLockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} paymentGateway={paymentGateway} />;
   }
 
   if (event.type === 'phone_block') {
-    return <PhoneBlockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
+    return <PhoneBlockOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} paymentGateway={paymentGateway} />;
   }
 
   if (event.type === 'age_gate') {
-    return <AgeGateOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} />;
+    return <AgeGateOverlay event={event} onDismiss={onDismiss} onResume={onResume} slug={slug ?? ''} currency={currency} paymentGateway={paymentGateway} />;
   }
 
-  // fake_billing — integração real com ZuckPay PIX
+  // fake_billing — integração real com o gateway ativo
   return (
     <div
       className="absolute inset-0 bg-[#0b141a] flex flex-col z-50"
@@ -1239,7 +1297,7 @@ export function EventOverlay({ event, onDismiss, onResume, currency = 'BRL' }: P
         <span className="text-white font-semibold text-sm">WhatsApp Pay</span>
       </div>
 
-      <PixStep slug={slug ?? ''} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} />
+      <PixStep slug={slug ?? ''} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
     </div>
   );
 }

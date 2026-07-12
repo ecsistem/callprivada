@@ -3,6 +3,21 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-12d] — Pagamentos públicos: switch automático para WayMB
+
+### Backend
+- `backend/internal/services/call_service.go` — `PublicCallData` passou a carregar `active_gateway` a partir da configuração do dono.
+- `backend/internal/handlers/call_handler.go` — endpoint público `/public/calls/:slug` agora expõe `active_gateway` no payload.
+
+### Frontend
+- `frontend/src/services/callService.ts` — `PublicCall.active_gateway` adicionado.
+- `frontend/src/pages/CallPublicPage.tsx` — paywall de entrada troca o texto entre PIX e WayMB conforme o gateway público.
+- `frontend/src/components/EventOverlay.tsx` — overlays de cobrança passam a criar/consultar WayMB quando o gateway ativo é `waymb`.
+
+### Validação
+- `go test ./internal/services ./internal/handlers` — ok.
+- `npx tsc -p tsconfig.json --noEmit` — ok.
+
 ## [2026-07-12c] — WayMB: tolerância para `referenceData.expiresAt`
 
 ### Backend

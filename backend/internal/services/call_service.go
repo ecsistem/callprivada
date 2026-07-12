@@ -23,40 +23,40 @@ var allowedImageMIMEs = map[string]bool{
 const imageMaxBytes = 10 * 1024 * 1024 // 10 MB
 
 type CreateCallInput struct {
-	VideoID              uuid.UUID
-	Title                string
-	DisplayName          string
-	StartTimeSeconds     int
-	EndTimeSeconds       int
-	PlaybackRate         float64
-	VideoZoom            float64
-	VideoX               float64
-	VideoY               float64
-	EntryPriceCents      int
-	LoopVideo            bool
-	CallMode             string
-	BillingMode          string
-	EndCallRedirectURL   string
-	ExpiresAt            *time.Time
+	VideoID            uuid.UUID
+	Title              string
+	DisplayName        string
+	StartTimeSeconds   int
+	EndTimeSeconds     int
+	PlaybackRate       float64
+	VideoZoom          float64
+	VideoX             float64
+	VideoY             float64
+	EntryPriceCents    int
+	LoopVideo          bool
+	CallMode           string
+	BillingMode        string
+	EndCallRedirectURL string
+	ExpiresAt          *time.Time
 }
 
 type UpdateCallInput struct {
-	Title                string
-	DisplayName          string
-	VideoID              uuid.UUID
-	StartTimeSeconds     int
-	EndTimeSeconds       int
-	PlaybackRate         float64
-	VideoZoom            float64
-	VideoX               float64
-	VideoY               float64
-	EntryPriceCents      int
-	LoopVideo            *bool
-	CallMode             string
-	BillingMode          string
-	EndCallRedirectURL   string
-	ExpiresAt            *time.Time
-	Status               string
+	Title              string
+	DisplayName        string
+	VideoID            uuid.UUID
+	StartTimeSeconds   int
+	EndTimeSeconds     int
+	PlaybackRate       float64
+	VideoZoom          float64
+	VideoX             float64
+	VideoY             float64
+	EntryPriceCents    int
+	LoopVideo          *bool
+	CallMode           string
+	BillingMode        string
+	EndCallRedirectURL string
+	ExpiresAt          *time.Time
+	Status             string
 }
 
 type CallService struct {
@@ -90,24 +90,24 @@ func (s *CallService) Create(ctx context.Context, userID uuid.UUID, in CreateCal
 	}
 
 	call := &domain.Call{
-		UserID:           userID,
-		VideoID:          in.VideoID,
-		Slug:             slug,
-		Title:            in.Title,
-		DisplayName:      in.DisplayName,
-		StartTimeSeconds: in.StartTimeSeconds,
-		EndTimeSeconds:   in.EndTimeSeconds,
-		PlaybackRate:     in.PlaybackRate,
-		VideoZoom:        in.VideoZoom,
-		VideoX:           in.VideoX,
-		VideoY:           in.VideoY,
-		EntryPriceCents:  in.EntryPriceCents,
+		UserID:             userID,
+		VideoID:            in.VideoID,
+		Slug:               slug,
+		Title:              in.Title,
+		DisplayName:        in.DisplayName,
+		StartTimeSeconds:   in.StartTimeSeconds,
+		EndTimeSeconds:     in.EndTimeSeconds,
+		PlaybackRate:       in.PlaybackRate,
+		VideoZoom:          in.VideoZoom,
+		VideoX:             in.VideoX,
+		VideoY:             in.VideoY,
+		EntryPriceCents:    in.EntryPriceCents,
 		LoopVideo:          in.LoopVideo,
 		CallMode:           in.CallMode,
 		BillingMode:        in.BillingMode,
 		EndCallRedirectURL: in.EndCallRedirectURL,
-		ExpiresAt:            in.ExpiresAt,
-		Status:               domain.CallStatusActive,
+		ExpiresAt:          in.ExpiresAt,
+		Status:             domain.CallStatusActive,
 	}
 	if err := s.calls.Create(ctx, call); err != nil {
 		return nil, err
@@ -195,10 +195,11 @@ func (s *CallService) List(ctx context.Context, userID uuid.UUID, page, perPage 
 }
 
 type PublicCallData struct {
-	Call     *domain.Call
-	VideoURL string
-	Events   []domain.CallEvent
-	Currency string
+	Call          *domain.Call
+	VideoURL      string
+	Events        []domain.CallEvent
+	Currency      string
+	ActiveGateway string
 }
 
 // CheckCreateLimit verifica se o usuário atingiu o limite de chamadas do plano.
@@ -249,13 +250,17 @@ func (s *CallService) GetPublic(ctx context.Context, slug string) (*PublicCallDa
 	}
 
 	currency := "BRL"
+	activeGateway := "zuckpay"
 	if s.configs != nil {
-		if cfg, err := s.configs.FindByUserID(ctx, call.UserID); err == nil && cfg.Currency != "" {
-			currency = cfg.Currency
+		if cfg, err := s.configs.FindByUserID(ctx, call.UserID); err == nil {
+			if cfg.Currency != "" {
+				currency = cfg.Currency
+			}
+			activeGateway = cfg.Gateway()
 		}
 	}
 
-	return &PublicCallData{Call: call, VideoURL: videoURL, Events: events, Currency: currency}, nil
+	return &PublicCallData{Call: call, VideoURL: videoURL, Events: events, Currency: currency, ActiveGateway: activeGateway}, nil
 }
 
 // UploadImage faz upload de imagem (foto de contato ou thumbnail) e retorna a storage key.

@@ -26,26 +26,26 @@ func NewCallHandler(calls *services.CallService, tracking *services.TrackingServ
 // ---- DTOs ----
 
 type callDTO struct {
-	ID                   string  `json:"id"`
-	Slug                 string  `json:"slug"`
-	Title                string  `json:"title"`
-	DisplayName          string  `json:"display_name"`
-	VideoID              string  `json:"video_id"`
-	StartTimeSeconds     int     `json:"start_time_seconds"`
-	EndTimeSeconds       int     `json:"end_time_seconds"`
-	PlaybackRate         float64 `json:"playback_rate"`
-	VideoZoom            float64 `json:"video_zoom"`
-	VideoX               float64 `json:"video_x"`
-	VideoY               float64 `json:"video_y"`
-	EntryPriceCents      int     `json:"entry_price_cents"`
-	LoopVideo            bool    `json:"loop_video"`
-	CallMode             string  `json:"call_mode"`
-	BillingMode          string  `json:"billing_mode"`
-	EndCallRedirectURL   string  `json:"end_call_redirect_url,omitempty"`
-	ExpiresAt            *string `json:"expires_at"`
-	Status               string  `json:"status"`
-	CreatedAt            string  `json:"created_at"`
-	ContactPhotoURL      string  `json:"contact_photo_url,omitempty"`
+	ID                 string  `json:"id"`
+	Slug               string  `json:"slug"`
+	Title              string  `json:"title"`
+	DisplayName        string  `json:"display_name"`
+	VideoID            string  `json:"video_id"`
+	StartTimeSeconds   int     `json:"start_time_seconds"`
+	EndTimeSeconds     int     `json:"end_time_seconds"`
+	PlaybackRate       float64 `json:"playback_rate"`
+	VideoZoom          float64 `json:"video_zoom"`
+	VideoX             float64 `json:"video_x"`
+	VideoY             float64 `json:"video_y"`
+	EntryPriceCents    int     `json:"entry_price_cents"`
+	LoopVideo          bool    `json:"loop_video"`
+	CallMode           string  `json:"call_mode"`
+	BillingMode        string  `json:"billing_mode"`
+	EndCallRedirectURL string  `json:"end_call_redirect_url,omitempty"`
+	ExpiresAt          *string `json:"expires_at"`
+	Status             string  `json:"status"`
+	CreatedAt          string  `json:"created_at"`
+	ContactPhotoURL    string  `json:"contact_photo_url,omitempty"`
 }
 
 func toCallDTO(c *domain.Call) callDTO {
@@ -54,24 +54,24 @@ func toCallDTO(c *domain.Call) callDTO {
 		mode = domain.CallModeIncoming
 	}
 	dto := callDTO{
-		ID:               c.ID.String(),
-		Slug:             c.Slug,
-		Title:            c.Title,
-		DisplayName:      c.DisplayName,
-		VideoID:          c.VideoID.String(),
-		StartTimeSeconds: c.StartTimeSeconds,
-		EndTimeSeconds:   c.EndTimeSeconds,
-		PlaybackRate:     c.PlaybackRate,
-		VideoZoom:        c.VideoZoom,
-		VideoX:           c.VideoX,
-		VideoY:           c.VideoY,
-		EntryPriceCents:  c.EntryPriceCents,
+		ID:                 c.ID.String(),
+		Slug:               c.Slug,
+		Title:              c.Title,
+		DisplayName:        c.DisplayName,
+		VideoID:            c.VideoID.String(),
+		StartTimeSeconds:   c.StartTimeSeconds,
+		EndTimeSeconds:     c.EndTimeSeconds,
+		PlaybackRate:       c.PlaybackRate,
+		VideoZoom:          c.VideoZoom,
+		VideoX:             c.VideoX,
+		VideoY:             c.VideoY,
+		EntryPriceCents:    c.EntryPriceCents,
 		LoopVideo:          c.LoopVideo,
 		CallMode:           mode,
 		BillingMode:        c.BillingMode,
 		EndCallRedirectURL: c.EndCallRedirectURL,
-		Status:               c.Status,
-		CreatedAt:            c.CreatedAt.Format(time.RFC3339),
+		Status:             c.Status,
+		CreatedAt:          c.CreatedAt.Format(time.RFC3339),
 	}
 	if c.ExpiresAt != nil {
 		s := c.ExpiresAt.Format(time.RFC3339)
@@ -81,36 +81,36 @@ func toCallDTO(c *domain.Call) callDTO {
 }
 
 type createCallRequest struct {
-	VideoID              string `json:"video_id" binding:"required,uuid"`
-	Title                string `json:"title" binding:"required,min=1,max=255"`
-	DisplayName          string `json:"display_name" binding:"required,min=1,max=100"`
-	StartTimeSeconds     int    `json:"start_time_seconds" binding:"min=0"`
-	EndTimeSeconds       int    `json:"end_time_seconds" binding:"min=0"`
-	EntryPriceCents      int    `json:"entry_price_cents" binding:"min=0"`
-	LoopVideo            bool   `json:"loop_video"`
-	CallMode             string `json:"call_mode" binding:"omitempty,oneof=incoming outgoing"`
-	BillingMode          string `json:"billing_mode" binding:"omitempty,oneof=none credits"`
-	EndCallRedirectURL   string `json:"end_call_redirect_url"`
-	ExpiresAt            string `json:"expires_at"`
+	VideoID            string `json:"video_id" binding:"required,uuid"`
+	Title              string `json:"title" binding:"required,min=1,max=255"`
+	DisplayName        string `json:"display_name" binding:"required,min=1,max=100"`
+	StartTimeSeconds   int    `json:"start_time_seconds" binding:"min=0"`
+	EndTimeSeconds     int    `json:"end_time_seconds" binding:"min=0"`
+	EntryPriceCents    int    `json:"entry_price_cents" binding:"min=0"`
+	LoopVideo          bool   `json:"loop_video"`
+	CallMode           string `json:"call_mode" binding:"omitempty,oneof=incoming outgoing"`
+	BillingMode        string `json:"billing_mode" binding:"omitempty,oneof=none credits"`
+	EndCallRedirectURL string `json:"end_call_redirect_url"`
+	ExpiresAt          string `json:"expires_at"`
 }
 
 type updateCallRequest struct {
-	Title                string  `json:"title" binding:"omitempty,min=1,max=255"`
-	DisplayName          string  `json:"display_name" binding:"omitempty,min=1,max=100"`
-	VideoID              string  `json:"video_id" binding:"omitempty,uuid"`
-	StartTimeSeconds     int     `json:"start_time_seconds" binding:"min=0"`
-	EndTimeSeconds       int     `json:"end_time_seconds" binding:"min=0"`
-	PlaybackRate         float64 `json:"playback_rate"`
-	VideoZoom            float64 `json:"video_zoom"`
-	VideoX               float64 `json:"video_x"`
-	VideoY               float64 `json:"video_y"`
-	EntryPriceCents      int     `json:"entry_price_cents" binding:"min=0"`
-	LoopVideo            *bool   `json:"loop_video"`
-	CallMode             string  `json:"call_mode" binding:"omitempty,oneof=incoming outgoing"`
-	BillingMode          string  `json:"billing_mode" binding:"omitempty,oneof=none credits"`
-	EndCallRedirectURL   string  `json:"end_call_redirect_url"`
-	ExpiresAt            string  `json:"expires_at"`
-	Status               string  `json:"status" binding:"omitempty,oneof=active disabled"`
+	Title              string  `json:"title" binding:"omitempty,min=1,max=255"`
+	DisplayName        string  `json:"display_name" binding:"omitempty,min=1,max=100"`
+	VideoID            string  `json:"video_id" binding:"omitempty,uuid"`
+	StartTimeSeconds   int     `json:"start_time_seconds" binding:"min=0"`
+	EndTimeSeconds     int     `json:"end_time_seconds" binding:"min=0"`
+	PlaybackRate       float64 `json:"playback_rate"`
+	VideoZoom          float64 `json:"video_zoom"`
+	VideoX             float64 `json:"video_x"`
+	VideoY             float64 `json:"video_y"`
+	EntryPriceCents    int     `json:"entry_price_cents" binding:"min=0"`
+	LoopVideo          *bool   `json:"loop_video"`
+	CallMode           string  `json:"call_mode" binding:"omitempty,oneof=incoming outgoing"`
+	BillingMode        string  `json:"billing_mode" binding:"omitempty,oneof=none credits"`
+	EndCallRedirectURL string  `json:"end_call_redirect_url"`
+	ExpiresAt          string  `json:"expires_at"`
+	Status             string  `json:"status" binding:"omitempty,oneof=active disabled"`
 }
 
 // ---- Handlers ----
@@ -130,11 +130,11 @@ func (h *CallHandler) Create(c *gin.Context) {
 		mode = domain.CallModeIncoming
 	}
 	in := services.CreateCallInput{
-		VideoID:              videoID,
-		Title:                req.Title,
-		DisplayName:          req.DisplayName,
-		StartTimeSeconds:     req.StartTimeSeconds,
-		EndTimeSeconds:       req.EndTimeSeconds,
+		VideoID:            videoID,
+		Title:              req.Title,
+		DisplayName:        req.DisplayName,
+		StartTimeSeconds:   req.StartTimeSeconds,
+		EndTimeSeconds:     req.EndTimeSeconds,
 		EntryPriceCents:    req.EntryPriceCents,
 		LoopVideo:          req.LoopVideo,
 		CallMode:           mode,
@@ -210,15 +210,15 @@ func (h *CallHandler) Update(c *gin.Context) {
 
 	videoID, _ := uuid.Parse(req.VideoID)
 	in := services.UpdateCallInput{
-		Title:                req.Title,
-		DisplayName:          req.DisplayName,
-		VideoID:              videoID,
-		StartTimeSeconds:     req.StartTimeSeconds,
-		EndTimeSeconds:       req.EndTimeSeconds,
-		PlaybackRate:         req.PlaybackRate,
-		VideoZoom:            req.VideoZoom,
-		VideoX:               req.VideoX,
-		VideoY:               req.VideoY,
+		Title:              req.Title,
+		DisplayName:        req.DisplayName,
+		VideoID:            videoID,
+		StartTimeSeconds:   req.StartTimeSeconds,
+		EndTimeSeconds:     req.EndTimeSeconds,
+		PlaybackRate:       req.PlaybackRate,
+		VideoZoom:          req.VideoZoom,
+		VideoX:             req.VideoX,
+		VideoY:             req.VideoY,
 		EntryPriceCents:    req.EntryPriceCents,
 		LoopVideo:          req.LoopVideo,
 		CallMode:           req.CallMode,
@@ -372,24 +372,25 @@ func (h *CallHandler) GetPublic(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"data": gin.H{
-			"slug":               data.Call.Slug,
-			"display_name":       data.Call.DisplayName,
-			"contact_photo_url":  photoURL,
-			"video_url":          data.VideoURL,
-			"start_time_seconds": data.Call.StartTimeSeconds,
-			"end_time_seconds":   data.Call.EndTimeSeconds,
-			"playback_rate":      playbackRate,
-			"video_zoom":         videoZoom,
-			"video_x":            data.Call.VideoX,
-			"video_y":            data.Call.VideoY,
+			"slug":                  data.Call.Slug,
+			"display_name":          data.Call.DisplayName,
+			"contact_photo_url":     photoURL,
+			"video_url":             data.VideoURL,
+			"start_time_seconds":    data.Call.StartTimeSeconds,
+			"end_time_seconds":      data.Call.EndTimeSeconds,
+			"playback_rate":         playbackRate,
+			"video_zoom":            videoZoom,
+			"video_x":               data.Call.VideoX,
+			"video_y":               data.Call.VideoY,
 			"entry_price_cents":     data.Call.EntryPriceCents,
 			"loop_video":            data.Call.LoopVideo,
 			"call_mode":             data.Call.CallMode,
 			"billing_mode":          data.Call.BillingMode,
 			"end_call_redirect_url": data.Call.EndCallRedirectURL,
-			"currency":                 data.Currency,
-			"events":                   evts,
-			"tracking":                 trackingMap,
+			"currency":              data.Currency,
+			"active_gateway":        data.ActiveGateway,
+			"events":                evts,
+			"tracking":              trackingMap,
 		},
 	})
 }
