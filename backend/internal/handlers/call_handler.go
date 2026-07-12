@@ -325,6 +325,7 @@ func (h *CallHandler) GetPublic(c *gin.Context) {
 		BillingPayerDocument    string `json:"billing_payer_document,omitempty"`
 		BillingPayerEmail       string `json:"billing_payer_email,omitempty"`
 		BillingPayerPhone       string `json:"billing_payer_phone,omitempty"`
+		ExtraTexts              map[string]string `json:"extra_texts,omitempty"`
 	}
 	evts := make([]publicEvent, len(data.Events))
 	for i, e := range data.Events {
@@ -345,6 +346,7 @@ func (h *CallHandler) GetPublic(c *gin.Context) {
 			BillingPayerDocument:    e.BillingPayerDocument,
 			BillingPayerEmail:       e.BillingPayerEmail,
 			BillingPayerPhone:       e.BillingPayerPhone,
+			ExtraTexts:              e.ExtraTexts,
 		}
 	}
 

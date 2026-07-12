@@ -47,6 +47,7 @@ type CreateEventInput struct {
 	BillingPayerDocument    string
 	BillingPayerEmail       string
 	BillingPayerPhone       string
+	ExtraTexts              map[string]string
 }
 
 type CallEventService struct {
@@ -83,6 +84,7 @@ func (s *CallEventService) Create(ctx context.Context, userID, callID uuid.UUID,
 		BillingPayerDocument:    in.BillingPayerDocument,
 		BillingPayerEmail:       in.BillingPayerEmail,
 		BillingPayerPhone:       in.BillingPayerPhone,
+		ExtraTexts:              in.ExtraTexts,
 	}
 	if err := s.events.Create(ctx, event); err != nil {
 		return nil, err
@@ -139,6 +141,7 @@ func (s *CallEventService) Update(ctx context.Context, userID, eventID uuid.UUID
 	event.BillingPayerDocument = in.BillingPayerDocument
 	event.BillingPayerEmail = in.BillingPayerEmail
 	event.BillingPayerPhone = in.BillingPayerPhone
+	event.ExtraTexts = in.ExtraTexts
 
 	if err := s.events.Update(ctx, event); err != nil {
 		return nil, err

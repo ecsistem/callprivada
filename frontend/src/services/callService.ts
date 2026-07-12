@@ -40,6 +40,8 @@ export interface PublicEvent {
   billing_payer_document?: string;
   billing_payer_email?: string;
   billing_payer_phone?: string;
+  /** Textos secundários customizados do overlay (chave → texto) */
+  extra_texts?: Record<string, string>;
 }
 
 export interface PublicCall {

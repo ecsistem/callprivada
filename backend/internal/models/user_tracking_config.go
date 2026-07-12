@@ -12,10 +12,12 @@ type UserTrackingConfig struct {
 	ID                uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID            uuid.UUID `gorm:"type:uuid;not null;uniqueIndex"`
 	FacebookPixelID   string    `gorm:"not null;default:''"`
-	TikTokPixelID     string    `gorm:"not null;default:''"`
+	// column tags explícitas: o naming strategy do GORM geraria
+	// tik_tok_pixel_id / ut_mify_token, que não existem na tabela.
+	TikTokPixelID     string    `gorm:"column:tiktok_pixel_id;not null;default:''"`
 	GoogleAnalyticsID string    `gorm:"not null;default:''"`
 	GTMContainerID    string    `gorm:"not null;default:''"`
-	UTMifyToken       string    `gorm:"not null;default:''"`
+	UTMifyToken       string    `gorm:"column:utmify_token;not null;default:''"`
 	DracofyToken      string    `gorm:"not null;default:''"`
 	CustomHeadScript  string    `gorm:"not null;default:''"`
 	CreatedAt         time.Time

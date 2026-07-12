@@ -65,6 +65,15 @@ type PresellConfig struct {
 
 	// Downsell — slug da página downsell para exit-intent
 	DownsellSlug string `json:"downsell_slug,omitempty"`
+
+	// Downsell — bloco de preço/desconto
+	OriginalPriceLabel   string `json:"original_price_label,omitempty"`
+	DiscountedPriceLabel string `json:"discounted_price_label,omitempty"`
+	DiscountBadge        string `json:"discount_badge,omitempty"`
+
+	// Textos avançados — sobrescreve textos secundários da página pública
+	// (chave → texto customizado; vazio usa o padrão do sistema)
+	ExtraTexts map[string]string `json:"extra_texts,omitempty"`
 }
 
 const (

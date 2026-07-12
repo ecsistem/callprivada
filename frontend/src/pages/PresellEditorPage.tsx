@@ -48,6 +48,24 @@ const defaultConfig = (): PresellConfig => ({
   downsell_slug: '',
 });
 
+// Textos secundários da página pública — editáveis em "Textos avançados".
+const PRESELL_EXTRA_TEXTS: { key: string; label: string; def: string; downsellOnly?: boolean; upsellOnly?: boolean; presellOnly?: boolean }[] = [
+  { key: 'viewer_count_text',      label: 'Texto do contador de pessoas', def: 'pessoas tentando entrar agora' },
+  { key: 'slots_label',            label: 'Label dos horários (tempo real)', def: 'Horários disponíveis agora' },
+  { key: 'slots_label_manual',     label: 'Label dos horários (manual)', def: 'Selecione um horário' },
+  { key: 'sold_out_label',         label: 'Texto de slot esgotado', def: 'Esgotado' },
+  { key: 'countdown_label',        label: 'Label do countdown', def: 'Esta oferta expira em' },
+  { key: 'countdown_expired_text', label: 'Texto quando o countdown zera', def: 'Vagas esgotadas — aguarde…' },
+  { key: 'cta_disclaimer',         label: 'Texto abaixo do botão CTA', def: 'Ao clicar, você será redirecionado para a chamada ao vivo.' },
+  { key: 'exit_modal_header',      label: 'Exit-intent: faixa do topo', def: '⚠️ ESPERA! Antes de sair…', presellOnly: true },
+  { key: 'exit_modal_title',       label: 'Exit-intent: título', def: 'Você está prestes a perder sua oportunidade', presellOnly: true },
+  { key: 'exit_modal_text',        label: 'Exit-intent: texto', def: 'Temos uma oferta especial para você. Não vá embora ainda.', presellOnly: true },
+  { key: 'exit_modal_button',      label: 'Exit-intent: botão', def: 'Ver oferta especial →', presellOnly: true },
+  { key: 'exit_modal_dismiss',     label: 'Exit-intent: link de sair', def: 'Não, quero sair mesmo assim', presellOnly: true },
+  { key: 'downsell_banner_text',   label: 'Faixa do topo (downsell)', def: '⚠️ ESPERA! Antes de sair — veja isso primeiro', downsellOnly: true },
+  { key: 'upsell_banner_text',     label: 'Faixa do topo (upsell)', def: '💎 Oferta exclusiva — disponível apenas agora', upsellOnly: true },
+];
+
 const SECTIONS = [
   { id: 'template', label: 'Template', icon: LayoutTemplate },
   { id: 'content', label: 'Conteúdo', icon: Type },
@@ -772,6 +790,36 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
                     </div>
                   )}
                 </div>
+
+                {/* ── Textos avançados — todos os textos da página são editáveis ── */}
+                <details className="bg-[#18181b] border border-white/5 rounded-2xl p-4 group">
+                  <summary className="cursor-pointer text-xs font-semibold text-gray-400 hover:text-white transition-colors select-none list-none flex items-center gap-1.5">
+                    <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+                    ✏️ Textos avançados <span className="text-gray-600 font-normal">(personalize qualquer texto da página)</span>
+                  </summary>
+                  <div className="space-y-3 mt-4">
+                    {PRESELL_EXTRA_TEXTS
+                      .filter(t =>
+                        (!t.downsellOnly || isDownsell) &&
+                        (!t.upsellOnly || isUpsell) &&
+                        (!t.presellOnly || (!isDownsell && !isUpsell)))
+                      .map(t => (
+                        <div key={t.key} className="space-y-1">
+                          <label className="text-xs text-gray-400">{t.label}</label>
+                          <input
+                            value={config.extra_texts?.[t.key] ?? ''}
+                            onChange={e => setConfig(prev => ({
+                              ...prev,
+                              extra_texts: { ...(prev.extra_texts ?? {}), [t.key]: e.target.value },
+                            }))}
+                            placeholder={t.def}
+                            className={inputCls}
+                          />
+                        </div>
+                      ))}
+                    <p className="text-xs text-gray-600">Deixe em branco para usar o texto padrão.</p>
+                  </div>
+                </details>
               </div>
             )}
 

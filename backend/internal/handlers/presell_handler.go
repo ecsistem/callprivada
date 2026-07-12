@@ -67,6 +67,12 @@ type presellConfigDTO struct {
 	CTAColor     string `json:"cta_color"`
 	RedirectURL  string `json:"redirect_url"`
 	DownsellSlug string `json:"downsell_slug,omitempty"`
+	// Downsell — bloco de preço/desconto
+	OriginalPriceLabel   string `json:"original_price_label,omitempty"`
+	DiscountedPriceLabel string `json:"discounted_price_label,omitempty"`
+	DiscountBadge        string `json:"discount_badge,omitempty"`
+	// Textos avançados customizados
+	ExtraTexts map[string]string `json:"extra_texts,omitempty"`
 }
 
 type presellDTO struct {
@@ -136,6 +142,10 @@ func toPresellDTO(p *domain.PresellPage) presellDTO {
 			CTAColor:         p.Config.CTAColor,
 			RedirectURL:      p.Config.RedirectURL,
 			DownsellSlug:     p.Config.DownsellSlug,
+			OriginalPriceLabel:   p.Config.OriginalPriceLabel,
+			DiscountedPriceLabel: p.Config.DiscountedPriceLabel,
+			DiscountBadge:        p.Config.DiscountBadge,
+			ExtraTexts:           p.Config.ExtraTexts,
 		},
 		CreatedAt: p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt: p.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
@@ -183,6 +193,10 @@ func configFromDTO(dto presellConfigDTO) domain.PresellConfig {
 		CTAColor:         dto.CTAColor,
 		RedirectURL:      dto.RedirectURL,
 		DownsellSlug:     dto.DownsellSlug,
+		OriginalPriceLabel:   dto.OriginalPriceLabel,
+		DiscountedPriceLabel: dto.DiscountedPriceLabel,
+		DiscountBadge:        dto.DiscountBadge,
+		ExtraTexts:           dto.ExtraTexts,
 	}
 }
 

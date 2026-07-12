@@ -1,0 +1,1 @@
+ALTER TABLE call_events ADD COLUMN IF NOT EXISTS extra_texts JSONB NOT NULL DEFAULT '{}';

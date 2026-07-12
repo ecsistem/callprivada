@@ -49,6 +49,9 @@ type CallEvent struct {
 	BillingPayerDocument    string    `json:"billing_payer_document"`
 	BillingPayerEmail       string    `json:"billing_payer_email"`
 	BillingPayerPhone       string    `json:"billing_payer_phone"`
+	// ExtraTexts permite sobrescrever qualquer texto secundário do overlay
+	// (ex: "paid_title", "cta_disclaimer") — chave → texto customizado.
+	ExtraTexts           map[string]string `json:"extra_texts,omitempty"`
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
 }

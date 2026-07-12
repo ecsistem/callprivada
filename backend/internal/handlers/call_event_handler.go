@@ -38,6 +38,7 @@ type eventDTO struct {
 	BillingPayerDocument    string `json:"billing_payer_document,omitempty"`
 	BillingPayerEmail       string `json:"billing_payer_email,omitempty"`
 	BillingPayerPhone       string `json:"billing_payer_phone,omitempty"`
+	ExtraTexts              map[string]string `json:"extra_texts,omitempty"`
 	CreatedAt               string `json:"created_at"`
 }
 
@@ -61,6 +62,7 @@ func toEventDTO(e *domain.CallEvent) eventDTO {
 		BillingPayerDocument:    e.BillingPayerDocument,
 		BillingPayerEmail:       e.BillingPayerEmail,
 		BillingPayerPhone:       e.BillingPayerPhone,
+		ExtraTexts:              e.ExtraTexts,
 		CreatedAt:               e.CreatedAt.Format(time.RFC3339),
 	}
 }
@@ -81,6 +83,7 @@ type upsertEventRequest struct {
 	BillingPayerDocument    string `json:"billing_payer_document"`
 	BillingPayerEmail       string `json:"billing_payer_email"`
 	BillingPayerPhone       string `json:"billing_payer_phone"`
+	ExtraTexts              map[string]string `json:"extra_texts"`
 }
 
 func (h *CallEventHandler) Create(c *gin.Context) {
@@ -113,6 +116,7 @@ func (h *CallEventHandler) Create(c *gin.Context) {
 		BillingPayerDocument:    req.BillingPayerDocument,
 		BillingPayerEmail:       req.BillingPayerEmail,
 		BillingPayerPhone:       req.BillingPayerPhone,
+		ExtraTexts:              req.ExtraTexts,
 	})
 	if err != nil {
 		respondError(c, err)
@@ -172,6 +176,7 @@ func (h *CallEventHandler) Update(c *gin.Context) {
 		BillingPayerDocument:    req.BillingPayerDocument,
 		BillingPayerEmail:       req.BillingPayerEmail,
 		BillingPayerPhone:       req.BillingPayerPhone,
+		ExtraTexts:              req.ExtraTexts,
 	})
 	if err != nil {
 		respondError(c, err)

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { formatPrice } from '../lib/currency';
 import { checkPixStatus, checkWayMBStatus, createPixPayment, createWayMBPayment, type BillingResult } from '../services/billingService';
 import type { PublicEvent } from '../services/callService';
+import { PhoneInput } from './PhoneInput';
 
 function useQRCode(text: string | undefined) {
   const [dataUrl, setDataUrl] = useState<string>('');
@@ -25,20 +26,33 @@ interface Props {
   paymentGateway?: 'zuckpay' | 'waymb';
 }
 
+/** Retorna o texto customizado do evento (extra_texts[key]) ou o fallback padrão. */
+function xt(event: PublicEvent, key: string, fallback: string): string {
+  const v = event.extra_texts?.[key];
+  return v && v.trim() !== '' ? v : fallback;
+}
+
 /* ─── PIX QR code step ─────────────────────────────────────────────────── */
 
 
 function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGateway = 'zuckpay' }: { slug: string; event: PublicEvent; onDismiss: () => void; onPaid?: () => void; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
+  const isWayMB = paymentGateway === 'waymb';
+
   const hasPreset =
     !!event.billing_payer_name &&
     !!event.billing_payer_document &&
     !!event.billing_payer_email;
 
-  // Mostra formulário apenas se o admin marcou "coletar dados" e não há preset
-  const showForm = event.billing_collect_payer_info && !hasPreset;
+  // WayMB precisa de dados reais do pagador (o MB WAY envia a aprovação para o
+  // telemóvel informado) — sempre coleta os dados, como na ligação por minutos.
+  const hasWayMBPreset = hasPreset && !!event.billing_payer_phone;
+  const showForm = isWayMB
+    ? !hasWayMBPreset
+    : event.billing_collect_payer_info && !hasPreset;
 
-  type Step = 'form' | 'loading' | 'qr' | 'checking' | 'paid' | 'error';
-  const [step, setStep] = useState<Step>(showForm ? 'form' : 'loading');
+  type Step = 'form' | 'method' | 'loading' | 'qr' | 'checking' | 'paid' | 'error';
+  // WayMB com preset completo ainda passa pela escolha de método (MB WAY / Multibanco)
+  const [step, setStep] = useState<Step>(showForm ? 'form' : isWayMB ? 'method' : 'loading');
   const [result, setResult] = useState<BillingResult | null>(null);
   const [errMsg, setErrMsg] = useState('');
   const [copied, setCopied] = useState(false);
@@ -50,7 +64,6 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
   const [phone, setPhone] = useState(event.billing_payer_phone ?? '');
 
   const qrDataUrl = useQRCode(result?.qr_code);
-  const isWayMB = paymentGateway === 'waymb';
   const gatewayName = isWayMB ? 'WayMB' : 'PIX';
   const isMultibanco = isWayMB && result?.waymb_method === 'multibanco' && (result.multibanco_entity || result.multibanco_reference);
 
@@ -74,20 +87,10 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
-  // Disparo automático — sempre que não há formulário a preencher.
+  // Disparo automático — apenas PIX sem formulário. WayMB sempre passa por
+  // formulário de dados + escolha de método antes de criar a cobrança.
   useEffect(() => {
-    if (showForm) return;
-    if (isWayMB) {
-      createWayMBPayment(slug, event.billing_amount_cents, 'mbway', {
-        payer_name:     event.billing_payer_name     || 'Visitante',
-        payer_document: event.billing_payer_document || '00000000000',
-        payer_email:    event.billing_payer_email    || 'lead@callprivada.app',
-        payer_phone:    event.billing_payer_phone    || '',
-      })
-        .then((r) => { setResult(r); setStep('qr'); startPolling(r.transaction_id); })
-        .catch(() => { setErrMsg('Não foi possível gerar o pagamento WayMB. Tente novamente.'); setStep('error'); });
-      return;
-    }
+    if (showForm || isWayMB) return;
 
     createPixPayment(slug, event.billing_amount_cents, {
       payer_name:     event.billing_payer_name     || 'Visitante',
@@ -102,26 +105,43 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    // WayMB: após os dados, o lead escolhe o método (MB WAY / Multibanco)
+    if (isWayMB) {
+      setErrMsg('');
+      setStep('method');
+      return;
+    }
     setStep('loading');
     try {
-      const r = isWayMB
-        ? await createWayMBPayment(slug, event.billing_amount_cents, 'mbway', {
-            payer_name: name,
-            payer_document: doc,
-            payer_email: email,
-            payer_phone: phone,
-          })
-        : await createPixPayment(slug, event.billing_amount_cents, {
-            payer_name: name,
-            payer_document: doc,
-            payer_email: email,
-            payer_phone: phone,
-          });
+      const r = await createPixPayment(slug, event.billing_amount_cents, {
+        payer_name: name,
+        payer_document: doc,
+        payer_email: email,
+        payer_phone: phone,
+      });
       setResult(r);
       setStep('qr');
       startPolling(r.transaction_id, r.zuckpay_txn_id);
     } catch {
       setErrMsg(`Não foi possível gerar o pagamento ${gatewayName}. Tente novamente.`);
+      setStep('error');
+    }
+  }
+
+  async function generateWayMB(method: 'mbway' | 'multibanco') {
+    setStep('loading');
+    try {
+      const r = await createWayMBPayment(slug, event.billing_amount_cents, method, {
+        payer_name:     name  || event.billing_payer_name  || '',
+        payer_document: doc   || event.billing_payer_document || '',
+        payer_email:    email || event.billing_payer_email || '',
+        payer_phone:    phone || event.billing_payer_phone || '',
+      });
+      setResult(r);
+      setStep('qr');
+      startPolling(r.transaction_id);
+    } catch {
+      setErrMsg('No se pudo generar el pago. Inténtalo de nuevo.');
       setStep('error');
     }
   }
@@ -153,12 +173,16 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
 
   const btnColor = event.button_color ?? '#25d366';
 
+  // WayMB atende Espanha (Bizum/MB WAY) — textos padrão em espanhol.
+  // t(chave_extra, texto_pt, texto_es): extra_texts sempre tem prioridade.
+  const t = (key: string, pt: string, es: string) => xt(event, key, isWayMB ? es : pt);
+
   /* ── Loading ── */
   if (step === 'loading') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-400 text-sm">Gerando cobrança {gatewayName}…</p>
+        <p className="text-gray-400 text-sm">{isWayMB ? 'Generando el pago…' : `Gerando cobrança ${gatewayName}…`}</p>
       </div>
     );
   }
@@ -169,10 +193,10 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
       <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-red-400 text-sm">{errMsg}</p>
         <button
-          onClick={() => setStep(showForm ? 'form' : 'loading')}
+          onClick={() => setStep(isWayMB ? 'method' : showForm ? 'form' : 'loading')}
           className="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-gray-700 hover:bg-gray-600"
         >
-          Tentar novamente
+          {isWayMB ? 'Intentar de nuevo' : 'Tentar novamente'}
         </button>
       </div>
     );
@@ -187,15 +211,54 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <p className="text-white font-bold text-lg">Pagamento confirmado!</p>
-        <p className="text-gray-400 text-sm">Obrigado. Seu acesso foi liberado.</p>
+        <p className="text-white font-bold text-lg">{t('paid_title', 'Pagamento confirmado!', '¡Pago confirmado!')}</p>
+        <p className="text-gray-400 text-sm">{t('paid_subtitle', 'Obrigado. Seu acesso foi liberado.', 'Gracias. Tu acceso ha sido liberado.')}</p>
         <button
           onClick={() => (onPaid ?? onDismiss)()}
           className="w-full max-w-xs py-3 rounded-xl font-semibold text-white text-sm"
           style={{ backgroundColor: btnColor }}
         >
-          Continuar
+          {t('paid_button', 'Continuar', 'Continuar')}
         </button>
+      </div>
+    );
+  }
+
+  /* ── Escolha do método WayMB (MB WAY / Multibanco) ── */
+  if (step === 'method') {
+    const methods: { id: 'mbway' | 'multibanco'; label: string; desc: string; icon: string }[] = [
+      { id: 'mbway',      label: 'MB WAY',     desc: 'Aprobación en la app MB WAY',              icon: '📱' },
+      { id: 'multibanco', label: 'Multibanco', desc: 'Entidad + referencia para cajero/banca',   icon: '🏧' },
+    ];
+    return (
+      <div className="flex-1 flex flex-col justify-center px-6 space-y-4">
+        <div className="text-center space-y-1">
+          <h2 className="text-white text-xl font-bold">¿Cómo deseas pagar?</h2>
+          {event.billing_amount_cents > 0 && (
+            <p className="text-[#25d366] font-bold text-2xl">{formatPrice(event.billing_amount_cents, currency)}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          {methods.map(m => (
+            <button
+              key={m.id}
+              onClick={() => generateWayMB(m.id)}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/5 hover:border-[#25d366]/50 hover:bg-[#25d366]/5 transition-all text-left"
+            >
+              <span className="text-2xl">{m.icon}</span>
+              <div>
+                <p className="text-white font-semibold text-sm">{m.label}</p>
+                <p className="text-gray-500 text-xs mt-0.5">{m.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        {showForm && (
+          <button onClick={() => setStep('form')}
+            className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors text-center">
+            ← Corregir datos
+          </button>
+        )}
       </div>
     );
   }
@@ -216,7 +279,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
         {/* Valor */}
         <div className="text-center">
           <p className="text-3xl font-black text-white tracking-tight">{formatPrice(result.amount_cents, currency)}</p>
-          <p className="text-gray-400 text-xs mt-0.5">Pagamento via {gatewayName} • instantâneo</p>
+          <p className="text-gray-400 text-xs mt-0.5">{t('payment_note', 'Pagamento via PIX • instantâneo', 'Pago vía WayMB • instantáneo')}</p>
         </div>
 
         {/* WayMB multibanco ou QR code PIX */}
@@ -225,17 +288,17 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white/5 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs mb-1">Entidade</p>
+                  <p className="text-gray-500 text-xs mb-1">Entidad</p>
                   <p className="text-white font-mono font-bold text-lg">{result.multibanco_entity}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs mb-1">Referência</p>
+                  <p className="text-gray-500 text-xs mb-1">Referencia</p>
                   <p className="text-white font-mono font-bold text-base tracking-wider">{result.multibanco_reference}</p>
                 </div>
               </div>
               {result.multibanco_expires_at ? (
                 <p className="text-gray-500 text-xs text-center">
-                  Expira em {new Date(result.multibanco_expires_at * 1000).toLocaleString('pt-BR')}
+                  Expira el {new Date(result.multibanco_expires_at * 1000).toLocaleString('es-ES')}
                 </p>
               ) : null}
             </div>
@@ -243,8 +306,8 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
         ) : isWayMB ? (
           <div className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2">
             <div className="text-3xl">📱</div>
-            <p className="text-white font-semibold text-sm">Aprovação enviada para o app WayMB</p>
-            <p className="text-gray-500 text-xs leading-relaxed">Abra o aplicativo WayMB e confirme o pagamento de {formatPrice(result.amount_cents, currency)}.</p>
+            <p className="text-white font-semibold text-sm">Aprobación enviada a tu móvil</p>
+            <p className="text-gray-500 text-xs leading-relaxed">Abre la aplicación y confirma el pago de {formatPrice(result.amount_cents, currency)}.</p>
           </div>
         ) : qrDataUrl ? (
           <div className="rounded-2xl bg-white p-3 shadow-lg shadow-black/40">
@@ -269,7 +332,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
         {/* Código copia-e-cola */}
         {!isWayMB && result.qr_code && (
           <div className="w-full">
-            <p className="text-xs text-gray-500 text-center mb-2">Ou use o código PIX copia e cola</p>
+            <p className="text-xs text-gray-500 text-center mb-2">{xt(event, 'copy_hint', 'Ou use o código PIX copia e cola')}</p>
 
             {/* Código truncado */}
             <div className="bg-[#1a2530] border border-white/10 rounded-xl px-3 py-2 mb-3">
@@ -302,7 +365,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  Copiar código PIX
+                  {xt(event, 'copy_button', 'Copiar código PIX')}
                 </>
               )}
             </button>
@@ -311,8 +374,8 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
 
         {isWayMB && !isMultibanco && (
           <div className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2">
-            <p className="text-white font-semibold text-sm">Aguardando confirmação no WayMB</p>
-            <p className="text-gray-500 text-xs leading-relaxed">Quando o pagamento for aprovado, este overlay será liberado automaticamente.</p>
+            <p className="text-white font-semibold text-sm">Esperando la confirmación del pago</p>
+            <p className="text-gray-500 text-xs leading-relaxed">Cuando el pago sea aprobado, esta pantalla se desbloqueará automáticamente.</p>
           </div>
         )}
 
@@ -325,14 +388,14 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
           {step === 'checking' ? (
             <>
               <div className="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin" />
-              Verificando pagamento…
+              {isWayMB ? 'Verificando el pago…' : 'Verificando pagamento…'}
             </>
           ) : (
             <>
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Já realizei o pagamento
+              {t('check_button', 'Já realizei o pagamento', 'Ya realicé el pago')}
             </>
           )}
         </button>
@@ -359,15 +422,16 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nome completo"
+          placeholder={isWayMB ? 'Nombre completo' : 'Nome completo'}
+          autoComplete="name"
           className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
         />
         <input
-          required
+          required={!isWayMB}
           value={doc}
           onChange={(e) => setDoc(e.target.value)}
-          placeholder="CPF (apenas números)"
-          maxLength={11}
+          placeholder={isWayMB ? 'NIF / DNI (opcional)' : 'CPF (apenas números)'}
+          maxLength={isWayMB ? 20 : 11}
           className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
         />
         <input
@@ -375,25 +439,37 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="E-mail"
+          placeholder={isWayMB ? 'Correo electrónico' : 'E-mail'}
+          autoComplete="email"
           className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
         />
-        <input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Telefone (opcional)"
-          className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
-        />
+        {isWayMB ? (
+          <PhoneInput
+            required
+            value={phone}
+            onChange={setPhone}
+            placeholder="912 345 678"
+          />
+        ) : (
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Telefone (opcional)"
+            autoComplete="tel"
+            className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
+          />
+        )}
         <button
           type="submit"
           className="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-opacity hover:opacity-90"
           style={{ backgroundColor: btnColor }}
         >
-          {event.button_text ?? 'Pagar agora'}
+          {isWayMB ? 'Elegir método de pago →' : (event.button_text ?? 'Pagar agora')}
         </button>
       </form>
 
-      <p className="text-center text-gray-600 text-xs">Pagamento Seguro • Seus dados estão seguros</p>
+      <p className="text-center text-gray-600 text-xs">{t('secure_note', 'Pagamento Seguro • Seus dados estão seguros', 'Pago Seguro • Tus datos están protegidos')}</p>
     </div>
   );
 }
@@ -430,7 +506,7 @@ function CountdownOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss:
       <div className="w-full max-w-sm space-y-5 text-center">
         <div className="flex items-center justify-center gap-2 text-red-400">
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-widest">Oferta por tempo limitado</span>
+          <span className="text-xs font-bold uppercase tracking-widest">{xt(event, 'badge', 'Oferta por tempo limitado')}</span>
         </div>
         <h2 className="text-white text-xl font-bold">{event.title}</h2>
         {event.description && <p className="text-gray-300 text-sm">{event.description}</p>}
@@ -503,7 +579,7 @@ function OfferCallOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss:
         </a>
 
         <button onClick={onDismiss} className="text-gray-600 text-xs hover:text-gray-400 mt-2">
-          Agora não
+          {xt(event, 'dismiss_text', 'Agora não')}
         </button>
       </div>
 
@@ -566,6 +642,9 @@ function SignalDropOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss
 /* ─── Reconnect Paywall Overlay ─────────────────────────────────────────── */
 
 function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', paymentGateway = 'zuckpay' }: { event: PublicEvent; onDismiss: () => void; slug: string; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
+  const isWayMB = paymentGateway === 'waymb';
+  // WayMB atende leads em espanhol — defaults ES; extra_texts tem prioridade.
+  const t = (key: string, pt: string, es: string) => xt(event, key, isWayMB ? es : pt);
   type Phase = 'lost' | 'trying' | 'failed' | 'payment';
   const [phase, setPhase] = useState<Phase>('lost');
   const [attempt, setAttempt] = useState(0);
@@ -604,8 +683,8 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
         </div>
         <div className="text-center space-y-2">
-          <p className="text-white text-xl font-bold">Sem conexão</p>
-          <p className="text-gray-400 text-sm">Verificando a rede{dots}</p>
+          <p className="text-white text-xl font-bold">{t('lost_title', 'Sem conexão', 'Sin conexión')}</p>
+          <p className="text-gray-400 text-sm">{t('lost_subtitle', 'Verificando a rede', 'Verificando la red')}{dots}</p>
         </div>
       </div>
     );
@@ -622,8 +701,8 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           </svg>
         </div>
         <div className="text-center space-y-1">
-          <p className="text-white text-lg font-semibold">Reconectando{dots}</p>
-          <p className="text-gray-500 text-sm">Tentativa {attempt} de 3</p>
+          <p className="text-white text-lg font-semibold">{t('trying_title', 'Reconectando', 'Reconectando')}{dots}</p>
+          <p className="text-gray-500 text-sm">{t('trying_subtitle', 'Tentativa', 'Intento')} {attempt} de 3</p>
         </div>
         <div className="flex gap-2">
           {[1,2,3].map(i => (
@@ -644,9 +723,11 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           </svg>
         </div>
         <div className="text-center space-y-2">
-          <p className="text-white text-xl font-bold">Conexão instável</p>
+          <p className="text-white text-xl font-bold">{t('failed_title', 'Conexão instável', 'Conexión inestable')}</p>
           <p className="text-gray-400 text-sm text-center">
-            {event.description || 'Sua conexão foi interrompida. Para restaurar a chamada, é necessário continuar com o pacote de conexão.'}
+            {event.description || (isWayMB
+              ? 'Tu conexión se ha interrumpido. Para restaurar la llamada, es necesario continuar con el paquete de conexión.'
+              : 'Sua conexão foi interrompida. Para restaurar a chamada, é necessário continuar com o pacote de conexão.')}
           </p>
         </div>
         <button
@@ -654,9 +735,9 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           className="w-full max-w-xs py-4 rounded-2xl font-bold text-white text-base bg-[#25d366] active:opacity-90 transition-opacity shadow-lg"
           style={{ backgroundColor: event.button_color ?? '#25d366' }}
         >
-          {event.button_text || 'Restaurar chamada'}
+          {event.button_text || (isWayMB ? 'Restaurar llamada' : 'Restaurar chamada')}
         </button>
-        <p className="text-gray-600 text-xs text-center">🔒 Pagamento seguro via WayMB</p>
+        <p className="text-gray-600 text-xs text-center">{t('secure_note', '🔒 Pagamento seguro', '🔒 Pago seguro')}</p>
       </div>
     );
   }
@@ -672,8 +753,8 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           </svg>
         </div>
         <div>
-          <span className="text-white font-semibold text-sm">Restaurar chamada</span>
-          <p className="text-[#8696a0] text-xs">Pagamento via WayMB</p>
+          <span className="text-white font-semibold text-sm">{isWayMB ? 'Restaurar llamada' : 'Restaurar chamada'}</span>
+          <p className="text-[#8696a0] text-xs">{isWayMB ? 'Pago vía WayMB' : 'Pagamento via PIX'}</p>
         </div>
       </div>
       <PixStep slug={slug} event={event} onDismiss={onDismiss} currency={currency} paymentGateway={paymentGateway} />
@@ -717,7 +798,7 @@ function UpsellOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss: ()
                 <path d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" />
               </svg>
             </div>
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: btnColor }}>Oferta especial</span>
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: btnColor }}>{xt(event, 'badge', 'Oferta especial')}</span>
           </div>
 
           <div>
@@ -734,7 +815,7 @@ function UpsellOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss: ()
           </button>
 
           <button onClick={onDismiss} className="w-full text-center text-gray-600 text-xs hover:text-gray-400">
-            Fechar
+            {xt(event, 'dismiss_text', 'Fechar')}
           </button>
         </div>
       </div>
@@ -797,7 +878,7 @@ function BatteryLowOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss
             <p className="text-gray-400 text-xs">{event.description || `A chamada pode cair a qualquer momento${dots}`}</p>
           </div>
         </div>
-        <p className="text-gray-500 text-xs text-center">Toque para fechar</p>
+        <p className="text-gray-500 text-xs text-center">{xt(event, 'tap_hint', 'Toque para fechar')}</p>
       </div>
     </div>
   );
@@ -822,7 +903,7 @@ function IncomingCallOverlay({ event, onDismiss }: { event: PublicEvent; onDismi
       </div>
       <div className="text-center space-y-1">
         <p className="text-white text-xl font-bold">{event.title || 'Contato desconhecido'}</p>
-        <p className="text-[#25d366] text-sm font-medium">Ligação de WhatsApp</p>
+        <p className="text-[#25d366] text-sm font-medium">{xt(event, 'call_subtitle', 'Ligação de WhatsApp')}</p>
         {event.description && <p className="text-gray-400 text-xs">{event.description}</p>}
       </div>
       <div className="flex gap-12">
@@ -833,7 +914,7 @@ function IncomingCallOverlay({ event, onDismiss }: { event: PublicEvent; onDismi
               <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" transform="rotate(135 12 12)" />
             </svg>
           </button>
-          <span className="text-white text-xs">Recusar</span>
+          <span className="text-white text-xs">{xt(event, 'decline_text', 'Recusar')}</span>
         </div>
         <div className="flex flex-col items-center gap-2">
           <button onClick={onDismiss}
@@ -842,7 +923,7 @@ function IncomingCallOverlay({ event, onDismiss }: { event: PublicEvent; onDismi
               <path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" />
             </svg>
           </button>
-          <span className="text-white text-xs">Atender</span>
+          <span className="text-white text-xs">{xt(event, 'accept_text', 'Atender')}</span>
         </div>
       </div>
     </div>
@@ -889,7 +970,7 @@ function ViewerCountOverlay({ event, onDismiss }: { event: PublicEvent; onDismis
         <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4">
           <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
         </svg>
-        <span className="text-white font-bold text-sm">{count.toLocaleString('pt-BR')} ao vivo</span>
+        <span className="text-white font-bold text-sm">{count.toLocaleString('pt-BR')} {xt(event, 'suffix_text', 'ao vivo')}</span>
       </div>
     </div>
   );
@@ -914,7 +995,7 @@ function SocialProofOverlay({ event, onDismiss }: { event: PublicEvent; onDismis
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white text-sm font-semibold leading-snug">{event.title || 'João acabou de pagar R$ 49'}</p>
-          <p className="text-purple-300 text-xs">agora mesmo</p>
+          <p className="text-purple-300 text-xs">{xt(event, 'time_text', 'agora mesmo')}</p>
         </div>
       </div>
     </div>
@@ -951,7 +1032,7 @@ function ExclusiveAccessOverlay({ event, onDismiss }: { event: PublicEvent; onDi
       <div className="bg-amber-500 rounded-2xl px-8 py-4">
         <p className="text-white text-4xl font-black tabular-nums">{m}:{s}</p>
       </div>
-      <button onClick={onDismiss} className="text-amber-300/60 text-xs">Fechar</button>
+      <button onClick={onDismiss} className="text-amber-300/60 text-xs">{xt(event, 'dismiss_text', 'Fechar')}</button>
     </div>
   );
 }
@@ -1004,7 +1085,7 @@ function TipJarOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', pay
           style={{ backgroundColor: btnColor }}>
           {event.button_text || 'Enviar presente'} 💝
         </button>
-        <button onClick={onDismiss} className="w-full text-center text-gray-600 text-xs">Agora não</button>
+        <button onClick={onDismiss} className="w-full text-center text-gray-600 text-xs">{xt(event, 'dismiss_text', 'Agora não')}</button>
       </div>
     </div>
   );
@@ -1021,7 +1102,7 @@ function VideoLockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', 
       <div className="absolute inset-0 bg-[#0b141a] flex flex-col z-50" onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center gap-3 bg-indigo-900/40">
           <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-          <span className="text-white font-semibold text-sm">Desbloquear vídeo</span>
+          <span className="text-white font-semibold text-sm">{xt(event, 'pay_header', 'Desbloquear vídeo')}</span>
         </div>
         <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
       </div>
@@ -1064,7 +1145,7 @@ function PhoneBlockOverlay({ event, onDismiss, onResume, slug, currency = 'BRL',
       <div className="absolute inset-0 bg-[#0b141a] flex flex-col z-50" onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center gap-3 bg-red-900/40">
           <svg viewBox="0 0 24 24" fill="white" className="w-5 h-5"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" transform="rotate(45 12 12)"/></svg>
-          <span className="text-white font-semibold text-sm">Liberar número</span>
+          <span className="text-white font-semibold text-sm">{xt(event, 'pay_header', 'Liberar número')}</span>
         </div>
         <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
       </div>
@@ -1108,7 +1189,7 @@ function AgeGateOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', pa
       <div className="absolute inset-0 bg-[#0b141a] flex flex-col z-50" onClick={e => e.stopPropagation()}>
         <div className="px-4 py-3 flex items-center gap-3 bg-yellow-900/30">
           <span className="text-xl">🔞</span>
-          <span className="text-white font-semibold text-sm">Verificação de maioridade</span>
+          <span className="text-white font-semibold text-sm">{xt(event, 'pay_header', 'Verificação de maioridade')}</span>
         </div>
         <PixStep slug={slug} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />
       </div>
@@ -1135,7 +1216,7 @@ function AgeGateOverlay({ event, onDismiss, onResume, slug, currency = 'BRL', pa
       </div>
       <div className="w-full max-w-xs bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
         <p className="text-yellow-300 text-xs text-center leading-relaxed">
-          Uma cobrança simbólica é usada para verificar que você possui um cartão válido registrado em nome de um adulto.
+          {xt(event, 'verify_note', 'Uma cobrança simbólica é usada para verificar que você possui um cartão válido registrado em nome de um adulto.')}
         </p>
       </div>
       <button onClick={() => setPaying(true)}
@@ -1294,7 +1375,7 @@ export function EventOverlay({ event, onDismiss, onResume, currency = 'BRL', pay
             <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm.029 18.88a9.947 9.947 0 01-5.031-1.36l-.361-.214-3.742.981.999-3.648-.235-.374A9.86 9.86 0 012.1 12.045C2.1 6.545 6.545 2.1 12.045 2.1c2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.898 6.988c-.003 5.45-4.437 9.894-9.902 9.894z"/>
           </svg>
         </div>
-        <span className="text-white font-semibold text-sm">WhatsApp Pay</span>
+        <span className="text-white font-semibold text-sm">{xt(event, 'pay_header', 'WhatsApp Pay')}</span>
       </div>
 
       <PixStep slug={slug ?? ''} event={event} onDismiss={onDismiss} onPaid={onResume ?? onDismiss} currency={currency} paymentGateway={paymentGateway} />

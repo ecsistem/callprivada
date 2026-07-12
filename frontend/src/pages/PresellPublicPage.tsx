@@ -4,6 +4,12 @@ import { getPublicPresell, trackCTAClick, type PresellConfig, type PresellCommen
 import { useTrackingScripts } from '../hooks/useTrackingScripts';
 import type { TrackingConfig } from '../services/trackingService';
 
+/** Retorna o texto customizado (config.extra_texts[key]) ou o fallback padrão. */
+function ct(config: PresellConfig | null, key: string, fallback: string): string {
+  const v = config?.extra_texts?.[key];
+  return v && v.trim() !== '' ? v : fallback;
+}
+
 function isDarkColor(hex: string): boolean {
   const cleaned = hex.replace('#', '');
   if (cleaned.length < 6) return false;
@@ -33,7 +39,7 @@ function randomViewers(base: number): number {
   return base + Math.floor(Math.random() * (delta * 2 + 1)) - delta;
 }
 
-function CountdownTimer({ seconds, textColor, ctaColor }: { seconds: number; textColor: string; ctaColor: string }) {
+function CountdownTimer({ seconds, textColor, ctaColor, label = 'Esta oferta expira em', expiredText = 'Vagas esgotadas — aguarde…' }: { seconds: number; textColor: string; ctaColor: string; label?: string; expiredText?: string }) {
   const [remaining, setRemaining] = useState(seconds);
   const ref = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -50,7 +56,7 @@ function CountdownTimer({ seconds, textColor, ctaColor }: { seconds: number; tex
   return (
     <div className="flex flex-col items-center mb-6">
       <p style={{ color: textColor, opacity: 0.6 }} className="text-xs font-semibold uppercase tracking-widest mb-2">
-        Esta oferta expira em
+        {label}
       </p>
       <div className="flex items-center gap-2">
         {[pad2(mins), pad2(secs)].map((unit, i) => (
@@ -66,7 +72,7 @@ function CountdownTimer({ seconds, textColor, ctaColor }: { seconds: number; tex
         ))}
       </div>
       <p style={{ color: textColor, opacity: 0.4 }} className="text-xs mt-1.5">
-        {remaining === 0 ? 'Vagas esgotadas — aguarde…' : `${mins}min ${secs}s`}
+        {remaining === 0 ? expiredText : `${mins}min ${secs}s`}
       </p>
     </div>
   );
@@ -340,27 +346,27 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
             style={{ background: '#0f0505', border: '1px solid rgba(220,38,38,0.3)' }}>
             <div className="py-3 px-4 text-center text-sm font-bold"
               style={{ background: 'linear-gradient(90deg,#dc2626,#b91c1c)', color: '#fff' }}>
-              ⚠️ ESPERA! Antes de sair…
+              {ct(config, 'exit_modal_header', '⚠️ ESPERA! Antes de sair…')}
             </div>
             <div className="p-6 text-center space-y-4">
               <p className="text-white font-bold text-lg leading-snug">
-                Você está prestes a perder sua oportunidade
+                {ct(config, 'exit_modal_title', 'Você está prestes a perder sua oportunidade')}
               </p>
               <p className="text-gray-400 text-sm">
-                Temos uma oferta especial para você. Não vá embora ainda.
+                {ct(config, 'exit_modal_text', 'Temos uma oferta especial para você. Não vá embora ainda.')}
               </p>
               <button
                 onClick={goToDownsell}
                 className="w-full py-3.5 rounded-xl font-bold text-white text-sm transition-all active:scale-95"
                 style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}
               >
-                Ver oferta especial →
+                {ct(config, 'exit_modal_button', 'Ver oferta especial →')}
               </button>
               <button
                 onClick={() => setShowExitModal(false)}
                 className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors pt-1"
               >
-                Não, quero sair mesmo assim
+                {ct(config, 'exit_modal_dismiss', 'Não, quero sair mesmo assim')}
               </button>
             </div>
           </div>
@@ -371,7 +377,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
       {isDownsell && (
         <div className="relative z-20 w-full py-2.5 px-4 text-center text-sm font-bold"
           style={{ background: 'linear-gradient(90deg, #dc2626, #b91c1c)', color: '#fff', letterSpacing: '0.02em' }}>
-          ⚠️ ESPERA! Antes de sair — veja isso primeiro
+          {ct(config, 'downsell_banner_text', '⚠️ ESPERA! Antes de sair — veja isso primeiro')}
         </div>
       )}
 
@@ -379,7 +385,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
       {isUpsell && (
         <div className="relative z-20 w-full py-2.5 px-4 text-center text-sm font-bold"
           style={{ background: 'linear-gradient(90deg, #7c3aed, #6d28d9)', color: '#fff', letterSpacing: '0.02em' }}>
-          💎 Oferta exclusiva — disponível apenas agora
+          {ct(config, 'upsell_banner_text', '💎 Oferta exclusiva — disponível apenas agora')}
         </div>
       )}
 
@@ -397,7 +403,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
               className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold mb-5"
             >
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              {viewerCount} pessoas tentando entrar agora
+              {viewerCount} {ct(config, 'viewer_count_text', 'pessoas tentando entrar agora')}
             </div>
           )}
 
@@ -512,6 +518,8 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
               seconds={config.countdown_seconds ?? 300}
               textColor={textColor}
               ctaColor={ctaColor}
+              label={ct(config, 'countdown_label', 'Esta oferta expira em')}
+              expiredText={ct(config, 'countdown_expired_text', 'Vagas esgotadas — aguarde…')}
             />
           )}
 
@@ -522,7 +530,9 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
                 style={{ color: textColor }}
                 className="text-xs font-semibold uppercase tracking-widest text-center mb-3 opacity-50"
               >
-                {config.use_real_time ? 'Horários disponíveis agora' : 'Selecione um horário'}
+                {config.use_real_time
+                  ? ct(config, 'slots_label', 'Horários disponíveis agora')
+                  : ct(config, 'slots_label_manual', 'Selecione um horário')}
               </p>
               <div className="flex flex-col gap-2.5">
                 {slots.map((slot, i) => {
@@ -561,7 +571,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
                           style={{ color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-normal"
                         >
-                          Esgotado
+                          {ct(config, 'sold_out_label', 'Esgotado')}
                         </span>
                       )}
                     </button>
@@ -616,7 +626,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
           </button>
 
           <p style={{ color: textColor }} className="text-xs mt-5 text-center opacity-30">
-            Ao clicar, você será redirecionado para a chamada ao vivo.
+            {ct(config, 'cta_disclaimer', 'Ao clicar, você será redirecionado para a chamada ao vivo.')}
           </p>
 
           {/* Comments */}

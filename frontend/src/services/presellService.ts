@@ -57,6 +57,16 @@ export interface PresellConfig {
   redirect_url: string;
   downsell_slug?: string;
 
+  /**
+   * Textos avançados — sobrescreve qualquer texto secundário da página pública.
+   * Chaves: countdown_label, countdown_expired_text, viewer_count_text,
+   * slots_label, slots_label_manual, sold_out_label, cta_disclaimer,
+   * exit_modal_header, exit_modal_title, exit_modal_text, exit_modal_button,
+   * exit_modal_dismiss, downsell_banner_text, upsell_banner_text.
+   * Valor vazio usa o padrão do sistema.
+   */
+  extra_texts?: Record<string, string>;
+
   // Downsell — price comparison block
   /** Preço original riscado, ex: "R$ 497" */
   original_price_label?: string;

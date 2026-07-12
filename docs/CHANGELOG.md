@@ -11,6 +11,15 @@ arquivos alterados/novos, e problemas encontrados.
 ### Validação
 - `npx tsc -p tsconfig.json --noEmit` — ok.
 
+## [2026-07-12f] — Fix save de rastreamento + select de DDI no telefone WayMB
+
+### Backend
+- `models/user_tracking_config.go` — colunas explícitas `tiktok_pixel_id` e `utmify_token`: o naming strategy do GORM gerava `tik_tok_pixel_id`/`ut_mify_token` (inexistentes) e o `PUT /settings/tracking` falhava com 500 (SQLSTATE 42703). O GET também retornava esses dois campos sempre vazios. **Requer rebuild do container backend.**
+
+### Frontend
+- `components/PhoneInput.tsx` — novo: select de país com bandeira + DDI (padrão 🇵🇹 +351, cobre Europa + Brasil/EUA) ao lado do input de número; emite o telefone completo `+DDInúmero`.
+- `EventOverlay.tsx` (form do pagador WayMB) e `CreditsOverlay.tsx` (dados do pagador) — campo de telefone trocado pelo `PhoneInput`.
+
 ## [2026-07-12e] — Editor de eventos: whitelist do backend para `age_gate`
 
 ### Backend
@@ -18,6 +27,12 @@ arquivos alterados/novos, e problemas encontrados.
 
 ### Validação
 - `go test ./internal/handlers` — ok.
+
+## [2026-07-12e] — WayMB: textos do checkout em espanhol
+
+### Frontend
+- `EventOverlay.tsx` — helper `t(key, pt, es)`: com gateway WayMB os textos padrão do fluxo de pagamento ficam em espanhol (formulário "Nombre completo/Correo electrónico/Teléfono móvil/NIF-DNI", "¿Cómo deseas pagar?", "Generando el pago…", "¡Pago confirmado!", "Ya realicé el pago", Entidad/Referencia, telas do reconnect paywall "Sin conexión/Reconectando/Conexión inestable"). PIX (ZuckPay) permanece em português e os overrides via `extra_texts` continuam tendo prioridade.
+- `CreditsOverlay.tsx` — telas exclusivas do WayMB (dados do pagador, escolha de método, aguardando MB WAY, dados Multibanco) traduzidas para espanhol.
 
 ## [2026-07-12d] — Pagamentos públicos: switch automático para WayMB
 
@@ -34,6 +49,12 @@ arquivos alterados/novos, e problemas encontrados.
 - `go test ./internal/services ./internal/handlers` — ok.
 - `npx tsc -p tsconfig.json --noEmit` — ok.
 
+## [2026-07-12d] — WayMB nos eventos de cobrança: coleta de dados do pagador
+
+### Frontend
+- `EventOverlay.tsx` (`PixStep`) — com o gateway WayMB ativo, o overlay de cobrança (fake_billing, video_lock, phone_block, age_gate, tip_jar, reconnect_paywall) agora segue o mesmo fluxo da ligação por minutos: formulário de dados (nome, e-mail, telemóvel obrigatório, NIF opcional) → escolha de método (MB WAY / Multibanco) → cobrança. Antes disparava automaticamente com dados falsos ("Visitante"/"00000000000") e método fixo `mbway`, e o pagamento nunca funcionava.
+- Retry de erro no WayMB volta para a escolha de método; PIX (ZuckPay) mantém o comportamento anterior.
+
 ## [2026-07-12c] — WayMB: tolerância para `referenceData.expiresAt`
 
 ### Backend
@@ -42,6 +63,21 @@ arquivos alterados/novos, e problemas encontrados.
 
 ### Validação
 - `go test ./internal/waymb ./internal/services` — ok.
+
+## [2026-07-12c] — Todos os textos editáveis (presell + eventos da timeline)
+
+### Backend
+- Migration `000035_add_extra_texts_to_call_events` — coluna `extra_texts JSONB DEFAULT '{}'`.
+- `domain/call_event.go` + `models/call_event.go` — `ExtraTexts map[string]string` (serializado como JSONB).
+- `services/call_event_service.go`, `handlers/call_event_handler.go`, `handlers/call_handler.go` (payload público) — `extra_texts` em create/update/list.
+- `domain/presell_page.go` + `handlers/presell_handler.go` — `PresellConfig` ganha `original_price_label`, `discounted_price_label`, `discount_badge` e `extra_texts` (antes os campos de preço eram descartados pelo struct tipado).
+
+### Frontend
+- `EventOverlay.tsx` — helper `xt(event, key, fallback)`; ~25 textos antes fixos agora sobrescritíveis: telas de pagamento (pago, copiar PIX, "já paguei", nota de segurança, cabeçalhos), reconnect paywall, incoming call (subtítulo/atender/recusar), badges de countdown/upsell, contadores, links de fechar.
+- `TimelineEditorPage.tsx` — registry `EXTRA_TEXT_FIELDS` por tipo + seção colapsável "✏️ Textos avançados" no formulário do evento.
+- `PresellPublicPage.tsx` — helper `ct(config, key, fallback)`; textos editáveis: label/expirado do countdown, contador de pessoas, labels de horários, "Esgotado", disclaimer do CTA, modal exit-intent (5 textos), faixas de downsell/upsell.
+- `PresellEditorPage.tsx` — registry `PRESELL_EXTRA_TEXTS` + seção "Textos avançados" na aba Conteúdo, filtrada por tipo de página.
+- `eventService.ts`, `callService.ts`, `presellService.ts` — tipos atualizados com `extra_texts`.
 
 ## [2026-07-12b] — Dashboard: filtro por data personalizado; Downsell: bloco de preço e design system
 

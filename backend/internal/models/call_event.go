@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,6 +28,7 @@ type CallEvent struct {
 	BillingPayerDocument    string `gorm:"not null;default:''"`
 	BillingPayerEmail       string `gorm:"not null;default:''"`
 	BillingPayerPhone       string `gorm:"not null;default:''"`
+	ExtraTexts              string `gorm:"type:jsonb;not null;default:'{}'"`
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 }
@@ -34,6 +36,10 @@ type CallEvent struct {
 func (CallEvent) TableName() string { return "call_events" }
 
 func (e CallEvent) ToDomain() *domain.CallEvent {
+	var extra map[string]string
+	if e.ExtraTexts != "" {
+		_ = json.Unmarshal([]byte(e.ExtraTexts), &extra)
+	}
 	return &domain.CallEvent{
 		ID:                   e.ID,
 		CallID:               e.CallID,
@@ -53,12 +59,19 @@ func (e CallEvent) ToDomain() *domain.CallEvent {
 		BillingPayerDocument:    e.BillingPayerDocument,
 		BillingPayerEmail:       e.BillingPayerEmail,
 		BillingPayerPhone:       e.BillingPayerPhone,
+		ExtraTexts:              extra,
 		CreatedAt:               e.CreatedAt,
 		UpdatedAt:               e.UpdatedAt,
 	}
 }
 
 func CallEventFromDomain(e *domain.CallEvent) CallEvent {
+	extraJSON := "{}"
+	if len(e.ExtraTexts) > 0 {
+		if b, err := json.Marshal(e.ExtraTexts); err == nil {
+			extraJSON = string(b)
+		}
+	}
 	return CallEvent{
 		ID:                      e.ID,
 		CallID:                  e.CallID,
@@ -78,6 +91,7 @@ func CallEventFromDomain(e *domain.CallEvent) CallEvent {
 		BillingPayerDocument:    e.BillingPayerDocument,
 		BillingPayerEmail:       e.BillingPayerEmail,
 		BillingPayerPhone:       e.BillingPayerPhone,
+		ExtraTexts:              extraJSON,
 		CreatedAt:            e.CreatedAt,
 		UpdatedAt:            e.UpdatedAt,
 	}

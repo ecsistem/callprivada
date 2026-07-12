@@ -306,3 +306,24 @@ Regras:
 - [x] `presellService.ts` — campos `original_price_label`, `discounted_price_label`, `discount_badge` em `PresellConfig`.
 - [x] `PresellEditorPage.tsx` — bloco "preço/desconto" exclusivo para downsell (preço original riscado + preço com desconto + badge).
 - [x] `PresellPublicPage.tsx` — bloco de comparação de preço renderizado na página pública do downsell.
+
+## Textos 100% editáveis — presell + eventos (2026-07-12)
+- [x] Migration 000035: coluna `extra_texts JSONB` em `call_events` (aplicada no banco local).
+- [x] Backend: `ExtraTexts map[string]string` em domain/model/service/handlers (evento + payload público).
+- [x] Backend: `PresellConfig` — campos `original_price_label`, `discounted_price_label`, `discount_badge` e `extra_texts` (domain + DTO do handler).
+- [x] `EventOverlay.tsx` — helper `xt()`; todos os textos hardcoded sobrescritíveis via `extra_texts` (pagamento, reconnect, incoming call, banners, botões secundários).
+- [x] `TimelineEditorPage.tsx` — seção colapsável "Textos avançados" por tipo de evento (registry `EXTRA_TEXT_FIELDS`).
+- [x] `PresellPublicPage.tsx` — helper `ct()`; countdown, viewer count, slots, esgotado, disclaimer, exit-intent modal e faixas de downsell/upsell editáveis.
+- [x] `PresellEditorPage.tsx` — seção "Textos avançados" na aba Conteúdo (registry `PRESELL_EXTRA_TEXTS`, filtrada por tipo de página).
+
+## WayMB — coleta de dados no evento de cobrança (2026-07-12)
+- [x] `EventOverlay.tsx` (`PixStep`) — com gateway WayMB sempre coleta os dados do pagador (telemóvel obrigatório) e mostra a escolha de método (MB WAY / Multibanco), como na ligação por minutos; antes disparava automaticamente com dados falsos e método fixo mbway.
+
+## WayMB — textos em espanhol (2026-07-12)
+- [x] `EventOverlay.tsx` — todos os textos do fluxo de pagamento em espanhol quando o gateway é WayMB (formulário, escolha de método, loading, erro, pago, Multibanco, reconnect paywall); PIX permanece em português. `extra_texts` continua tendo prioridade.
+- [x] `CreditsOverlay.tsx` — telas WayMB (dados do pagador, método, aguardando pagamento, Multibanco) traduzidas para espanhol.
+
+## WayMB — select de DDI com bandeira + fix tracking (2026-07-12)
+- [x] `models/user_tracking_config.go` — tags `column:tiktok_pixel_id` e `column:utmify_token` (GORM gerava `tik_tok_pixel_id`/`ut_mify_token` e o PUT /settings/tracking retornava 500).
+- [x] `components/PhoneInput.tsx` — novo componente: select de país (bandeira + DDI, padrão 🇵🇹 +351, ~35 países europeus) + input de número; emite `+DDInúmero`.
+- [x] `EventOverlay.tsx` e `CreditsOverlay.tsx` — telefone do checkout WayMB usa o `PhoneInput`.

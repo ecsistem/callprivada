@@ -20,6 +20,8 @@ export interface CallEvent {
   billing_payer_document?: string;
   billing_payer_email?: string;
   billing_payer_phone?: string;
+  /** Sobrescreve textos secundários do overlay — chave → texto customizado */
+  extra_texts?: Record<string, string>;
   created_at: string;
 }
 
@@ -39,6 +41,7 @@ export interface UpsertEventPayload {
   billing_payer_document?: string;
   billing_payer_email?: string;
   billing_payer_phone?: string;
+  extra_texts?: Record<string, string>;
 }
 
 export async function listEvents(callId: string): Promise<CallEvent[]> {
