@@ -3,6 +3,34 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-12k] — Fix: evento "Verificação de idade" não era criado
+
+### Backend
+- `services/call_event_service.go` — `age_gate` adicionado ao mapa `validEventTypes`. O tipo já estava no binding do handler e no editor, mas o service rejeitava a criação com "tipo de evento inválido: age_gate" — por isso o editor de vídeo não conseguia adicionar a camada. **Requer rebuild do container backend** (junto com o fix do tracking de 2026-07-12f).
+
+## [2026-07-12j] — WayMB Multibanco sem formulário de dados
+
+### Frontend
+- `EventOverlay.tsx` e `CreditsOverlay.tsx` — ao escolher **Multibanco**, a cobrança é gerada imediatamente (entidade + referência não dependem do pagador); o body envia placeholders ("Visitante"/"999999990"/e-mail genérico) que satisfazem o binding do handler. **MB WAY** continua exigindo o formulário completo (o push de aprovação vai para o telemóvel do pagador). Retry de erro no EventOverlay volta para a escolha de método.
+
+## [2026-07-12i] — WayMB: método primeiro, todos os campos obrigatórios, erros detalhados
+
+### Frontend
+- `EventOverlay.tsx` (`PixStep`) — fluxo invertido: 1) escolha do método (MB WAY/Multibanco), 2) formulário de dados com o método exibido no topo e link "← Trocar método de pagamento". Todos os campos obrigatórios (nome, NIF, e-mail, telemóvel) com validação própria e mensagem inline; erro de pagamento mostra a mensagem real da API (fallbacks por status: 400 dados inválidos, 402/422 recusado, 5xx indisponível, sem resposta = sem ligação); retry volta ao formulário com os dados preservados.
+- `CreditsOverlay.tsx` — mesma inversão: pacote → método → dados do pagador → "Pagar agora" (com loading). NIF obrigatório; validação campo a campo; mensagens de erro da API idem.
+
+## [2026-07-12h] — Editor de vídeo: todos os textos dos eventos editáveis
+
+### Frontend
+- `lib/eventExtraTexts.ts` — novo: registry `EXTRA_TEXT_FIELDS`/`COMMON_PAY_TEXTS` compartilhado (movido de `TimelineEditorPage.tsx`).
+- `VideoEditorPage.tsx` — painel de propriedades do evento ganhou a seção colapsável "✏️ Textos avançados" com os textos secundários do tipo selecionado (mesmos overrides `extra_texts` usados pelos overlays); salvamento usa o mesmo debounce de 500ms dos demais campos.
+- `TimelineEditorPage.tsx` — passa a importar o registry compartilhado.
+
+## [2026-07-12g] — WayMB: textos trocados de espanhol para português de Portugal
+
+### Frontend
+- `EventOverlay.tsx` e `CreditsOverlay.tsx` — todos os textos do checkout WayMB agora em pt-PT ("A gerar o pagamento…", "Como pretende pagar?", "Telemóvel", "Já efetuei o pagamento", "Sem ligação", "Entidade/Referência", "Pague no ATM ou homebanking", etc.). PIX (ZuckPay) permanece em pt-BR e `extra_texts` continua com prioridade.
+
 ## [2026-07-12f] — VideoEditor: defaults válidos para `signal_drop` e `screenshot_alert`
 
 ### Frontend
@@ -28,11 +56,11 @@ arquivos alterados/novos, e problemas encontrados.
 ### Validação
 - `go test ./internal/handlers` — ok.
 
-## [2026-07-12e] — WayMB: textos do checkout em espanhol
+## [2026-07-12e] — WayMB: textos do checkout em português do Brasil
 
 ### Frontend
-- `EventOverlay.tsx` — helper `t(key, pt, es)`: com gateway WayMB os textos padrão do fluxo de pagamento ficam em espanhol (formulário "Nombre completo/Correo electrónico/Teléfono móvil/NIF-DNI", "¿Cómo deseas pagar?", "Generando el pago…", "¡Pago confirmado!", "Ya realicé el pago", Entidad/Referencia, telas do reconnect paywall "Sin conexión/Reconectando/Conexión inestable"). PIX (ZuckPay) permanece em português e os overrides via `extra_texts` continuam tendo prioridade.
-- `CreditsOverlay.tsx` — telas exclusivas do WayMB (dados do pagador, escolha de método, aguardando MB WAY, dados Multibanco) traduzidas para espanhol.
+- `EventOverlay.tsx` — helper `t(key, pt, waymb)`: com gateway WayMB os textos padrão do fluxo de pagamento ficam em português do Brasil (formulário "Nome completo/E-mail/Telefone celular/NIF-DNI", "Como você deseja pagar?", "Gerando pagamento…", "Pagamento confirmado!", "Já realizei o pagamento", Entidade/Referência, telas do reconnect paywall "Sem conexão/Reconectando/Conexão instável"). PIX (ZuckPay) permanece em português e os overrides via `extra_texts` continuam tendo prioridade.
+- `CreditsOverlay.tsx` — telas exclusivas do WayMB (dados do pagador, escolha de método, aguardando MB WAY, dados Multibanco) traduzidas para português do Brasil.
 
 ## [2026-07-12d] — Pagamentos públicos: switch automático para WayMB
 

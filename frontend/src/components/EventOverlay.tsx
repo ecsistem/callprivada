@@ -44,17 +44,16 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
     !!event.billing_payer_email;
 
   // WayMB precisa de dados reais do pagador (o MB WAY envia a aprovação para o
-  // telemóvel informado) — sempre coleta os dados, como na ligação por minutos.
-  const hasWayMBPreset = hasPreset && !!event.billing_payer_phone;
-  const showForm = isWayMB
-    ? !hasWayMBPreset
-    : event.billing_collect_payer_info && !hasPreset;
+  // telemóvel informado) — sempre coleta todos os dados.
+  const showForm = isWayMB || (event.billing_collect_payer_info && !hasPreset);
 
   type Step = 'form' | 'method' | 'loading' | 'qr' | 'checking' | 'paid' | 'error';
-  // WayMB com preset completo ainda passa pela escolha de método (MB WAY / Multibanco)
-  const [step, setStep] = useState<Step>(showForm ? 'form' : isWayMB ? 'method' : 'loading');
+  // WayMB: primeiro o método (MB WAY / Multibanco), depois o formulário.
+  const [step, setStep] = useState<Step>(isWayMB ? 'method' : showForm ? 'form' : 'loading');
+  const [waymbMethod, setWaymbMethod] = useState<'mbway' | 'multibanco'>('mbway');
   const [result, setResult] = useState<BillingResult | null>(null);
   const [errMsg, setErrMsg] = useState('');
+  const [formError, setFormError] = useState('');
   const [copied, setCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -103,12 +102,53 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Extrai a mensagem de erro real da API para explicar o que falhou.
+  function apiErrorMessage(err: unknown, fallback: string): string {
+    const resp = (err as { response?: { status?: number; data?: { error?: { message?: string } } } })?.response;
+    const apiMsg = resp?.data?.error?.message;
+    if (apiMsg) return apiMsg;
+    if (resp?.status === 400) return isWayMB ? 'Dados inválidos. Verifique o telemóvel e o NIF e tente novamente.' : 'Dados inválidos. Verifique o CPF e tente novamente.';
+    if (resp?.status === 402 || resp?.status === 422) return 'O pagamento foi recusado pelo gateway. Verifique os dados e tente novamente.';
+    if (resp && (resp.status ?? 0) >= 500) return 'O serviço de pagamento está indisponível no momento. Tente novamente em instantes.';
+    if (!resp) return 'Sem ligação ao servidor. Verifique a sua internet e tente novamente.';
+    return fallback;
+  }
+
+  // Valida o formulário WayMB — todos os campos são obrigatórios.
+  function validateWayMBForm(): string {
+    if (!name.trim()) return 'Preencha o nome completo.';
+    if (!doc.trim()) return 'Preencha o NIF.';
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return 'Preencha um e-mail válido.';
+    if (!phone.trim() || phone.replace(/\D/g, '').length < 9) return 'Preencha um telemóvel válido (com indicativo do país).';
+    return '';
+  }
+
+  async function createWayMB(method: 'mbway' | 'multibanco', payer: { name: string; doc: string; email: string; phone: string }) {
+    setStep('loading');
+    try {
+      const r = await createWayMBPayment(slug, event.billing_amount_cents, method, {
+        payer_name: payer.name,
+        payer_document: payer.doc,
+        payer_email: payer.email,
+        payer_phone: payer.phone,
+      });
+      setResult(r);
+      setStep('qr');
+      startPolling(r.transaction_id);
+    } catch (err) {
+      setErrMsg(apiErrorMessage(err, 'Não foi possível gerar o pagamento. Tente novamente.'));
+      setStep('error');
+    }
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    // WayMB: após os dados, o lead escolhe o método (MB WAY / Multibanco)
+    setFormError('');
+    // WayMB (MB WAY): método já escolhido — valida todos os dados e cria a cobrança.
     if (isWayMB) {
-      setErrMsg('');
-      setStep('method');
+      const v = validateWayMBForm();
+      if (v) { setFormError(v); return; }
+      await createWayMB(waymbMethod, { name: name.trim(), doc: doc.trim(), email: email.trim(), phone: phone.trim() });
       return;
     }
     setStep('loading');
@@ -122,26 +162,8 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
       setResult(r);
       setStep('qr');
       startPolling(r.transaction_id, r.zuckpay_txn_id);
-    } catch {
-      setErrMsg(`Não foi possível gerar o pagamento ${gatewayName}. Tente novamente.`);
-      setStep('error');
-    }
-  }
-
-  async function generateWayMB(method: 'mbway' | 'multibanco') {
-    setStep('loading');
-    try {
-      const r = await createWayMBPayment(slug, event.billing_amount_cents, method, {
-        payer_name:     name  || event.billing_payer_name  || '',
-        payer_document: doc   || event.billing_payer_document || '',
-        payer_email:    email || event.billing_payer_email || '',
-        payer_phone:    phone || event.billing_payer_phone || '',
-      });
-      setResult(r);
-      setStep('qr');
-      startPolling(r.transaction_id);
-    } catch {
-      setErrMsg('No se pudo generar el pago. Inténtalo de nuevo.');
+    } catch (err) {
+      setErrMsg(apiErrorMessage(err, `Não foi possível gerar o pagamento ${gatewayName}. Tente novamente.`));
       setStep('error');
     }
   }
@@ -173,16 +195,16 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
 
   const btnColor = event.button_color ?? '#25d366';
 
-  // WayMB atende Espanha (Bizum/MB WAY) — textos padrão em espanhol.
-  // t(chave_extra, texto_pt, texto_es): extra_texts sempre tem prioridade.
-  const t = (key: string, pt: string, es: string) => xt(event, key, isWayMB ? es : pt);
+  // WayMB usa textos padrão em português do Brasil.
+  // t(chave_extra, texto_pt, texto_waymb): extra_texts sempre tem prioridade.
+  const t = (key: string, pt: string, waymb: string) => xt(event, key, isWayMB ? waymb : pt);
 
   /* ── Loading ── */
   if (step === 'loading') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4">
         <div className="w-10 h-10 border-2 border-[#25d366] border-t-transparent rounded-full animate-spin" />
-        <p className="text-gray-400 text-sm">{isWayMB ? 'Generando el pago…' : `Gerando cobrança ${gatewayName}…`}</p>
+        <p className="text-gray-400 text-sm">{isWayMB ? 'Gerando pagamento…' : `Gerando cobrança ${gatewayName}…`}</p>
       </div>
     );
   }
@@ -196,7 +218,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
           onClick={() => setStep(isWayMB ? 'method' : showForm ? 'form' : 'loading')}
           className="px-6 py-2 rounded-xl text-sm font-semibold text-white bg-gray-700 hover:bg-gray-600"
         >
-          {isWayMB ? 'Intentar de nuevo' : 'Tentar novamente'}
+          {isWayMB ? 'Tentar novamente' : 'Tentar novamente'}
         </button>
       </div>
     );
@@ -211,8 +233,8 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <p className="text-white font-bold text-lg">{t('paid_title', 'Pagamento confirmado!', '¡Pago confirmado!')}</p>
-        <p className="text-gray-400 text-sm">{t('paid_subtitle', 'Obrigado. Seu acesso foi liberado.', 'Gracias. Tu acceso ha sido liberado.')}</p>
+        <p className="text-white font-bold text-lg">{t('paid_title', 'Pagamento confirmado!', 'Pagamento confirmado!')}</p>
+        <p className="text-gray-400 text-sm">{t('paid_subtitle', 'Obrigado. Seu acesso foi liberado.', 'Obrigado. O seu acesso foi libertado.')}</p>
         <button
           onClick={() => (onPaid ?? onDismiss)()}
           className="w-full max-w-xs py-3 rounded-xl font-semibold text-white text-sm"
@@ -227,13 +249,13 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
   /* ── Escolha do método WayMB (MB WAY / Multibanco) ── */
   if (step === 'method') {
     const methods: { id: 'mbway' | 'multibanco'; label: string; desc: string; icon: string }[] = [
-      { id: 'mbway',      label: 'MB WAY',     desc: 'Aprobación en la app MB WAY',              icon: '📱' },
-      { id: 'multibanco', label: 'Multibanco', desc: 'Entidad + referencia para cajero/banca',   icon: '🏧' },
+      { id: 'mbway',      label: 'MB WAY',     desc: 'Confirmação no app MB WAY',               icon: '📱' },
+      { id: 'multibanco', label: 'Multibanco', desc: 'Entidadee + referência para caixa/banco',  icon: '🏧' },
     ];
     return (
       <div className="flex-1 flex flex-col justify-center px-6 space-y-4">
         <div className="text-center space-y-1">
-          <h2 className="text-white text-xl font-bold">¿Cómo deseas pagar?</h2>
+          <h2 className="text-white text-xl font-bold">Como você deseja pagar?</h2>
           {event.billing_amount_cents > 0 && (
             <p className="text-[#25d366] font-bold text-2xl">{formatPrice(event.billing_amount_cents, currency)}</p>
           )}
@@ -242,7 +264,22 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
           {methods.map(m => (
             <button
               key={m.id}
-              onClick={() => generateWayMB(m.id)}
+              onClick={() => {
+                setWaymbMethod(m.id);
+                setFormError('');
+                if (m.id === 'multibanco') {
+                  // Multibanco não depende dos dados do pagador (só entidade +
+                  // referência) — gera direto, sem formulário.
+                  createWayMB('multibanco', {
+                    name:  event.billing_payer_name     || 'Visitante',
+                    doc:   event.billing_payer_document || '999999990',
+                    email: event.billing_payer_email    || 'lead@callprivada.app',
+                    phone: event.billing_payer_phone    || '',
+                  });
+                } else {
+                  setStep('form');
+                }
+              }}
               className="w-full flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/5 hover:border-[#25d366]/50 hover:bg-[#25d366]/5 transition-all text-left"
             >
               <span className="text-2xl">{m.icon}</span>
@@ -253,12 +290,6 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
             </button>
           ))}
         </div>
-        {showForm && (
-          <button onClick={() => setStep('form')}
-            className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors text-center">
-            ← Corregir datos
-          </button>
-        )}
       </div>
     );
   }
@@ -279,7 +310,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
         {/* Valor */}
         <div className="text-center">
           <p className="text-3xl font-black text-white tracking-tight">{formatPrice(result.amount_cents, currency)}</p>
-          <p className="text-gray-400 text-xs mt-0.5">{t('payment_note', 'Pagamento via PIX • instantâneo', 'Pago vía WayMB • instantáneo')}</p>
+          <p className="text-gray-400 text-xs mt-0.5">{t('payment_note', 'Pagamento via PIX • instantâneo', 'Pagamento via WayMB • instantâneo')}</p>
         </div>
 
         {/* WayMB multibanco ou QR code PIX */}
@@ -288,17 +319,17 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="bg-white/5 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs mb-1">Entidad</p>
+                  <p className="text-gray-500 text-xs mb-1">Entidadee</p>
                   <p className="text-white font-mono font-bold text-lg">{result.multibanco_entity}</p>
                 </div>
                 <div className="bg-white/5 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs mb-1">Referencia</p>
+                  <p className="text-gray-500 text-xs mb-1">Referência</p>
                   <p className="text-white font-mono font-bold text-base tracking-wider">{result.multibanco_reference}</p>
                 </div>
               </div>
               {result.multibanco_expires_at ? (
                 <p className="text-gray-500 text-xs text-center">
-                  Expira el {new Date(result.multibanco_expires_at * 1000).toLocaleString('es-ES')}
+                  Expira em {new Date(result.multibanco_expires_at * 1000).toLocaleString('pt-BR')}
                 </p>
               ) : null}
             </div>
@@ -306,8 +337,8 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
         ) : isWayMB ? (
           <div className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2">
             <div className="text-3xl">📱</div>
-            <p className="text-white font-semibold text-sm">Aprobación enviada a tu móvil</p>
-            <p className="text-gray-500 text-xs leading-relaxed">Abre la aplicación y confirma el pago de {formatPrice(result.amount_cents, currency)}.</p>
+            <p className="text-white font-semibold text-sm">Confirmação enviada ao seu celular</p>
+            <p className="text-gray-500 text-xs leading-relaxed">Abra o app e confirme o pagamento de {formatPrice(result.amount_cents, currency)}.</p>
           </div>
         ) : qrDataUrl ? (
           <div className="rounded-2xl bg-white p-3 shadow-lg shadow-black/40">
@@ -374,8 +405,8 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
 
         {isWayMB && !isMultibanco && (
           <div className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2">
-            <p className="text-white font-semibold text-sm">Esperando la confirmación del pago</p>
-            <p className="text-gray-500 text-xs leading-relaxed">Cuando el pago sea aprobado, esta pantalla se desbloqueará automáticamente.</p>
+            <p className="text-white font-semibold text-sm">Aguardando a confirmação do pagamento</p>
+            <p className="text-gray-500 text-xs leading-relaxed">Quando o pagamento for aprovado, esta tela será desbloqueada automaticamente.</p>
           </div>
         )}
 
@@ -388,14 +419,14 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
           {step === 'checking' ? (
             <>
               <div className="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin" />
-              {isWayMB ? 'Verificando el pago…' : 'Verificando pagamento…'}
+              {isWayMB ? 'Verificando pagamento…' : 'Verificando pagamento…'}
             </>
           ) : (
             <>
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {t('check_button', 'Já realizei o pagamento', 'Ya realicé el pago')}
+              {t('check_button', 'Já realizei o pagamento', 'Já realizei o pagamento')}
             </>
           )}
         </button>
@@ -417,20 +448,26 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
         )}
       </div>
 
+      {isWayMB && (
+        <p className="text-center text-gray-500 text-xs">
+          Pagamento via <span className="text-white font-semibold">{waymbMethod === 'mbway' ? '📱 MB WAY' : '🏧 Multibanco'}</span>
+        </p>
+      )}
+
       <form onSubmit={submit} className="space-y-3">
         <input
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={isWayMB ? 'Nombre completo' : 'Nome completo'}
+          placeholder="Nome completo"
           autoComplete="name"
           className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
         />
         <input
-          required={!isWayMB}
+          required
           value={doc}
           onChange={(e) => setDoc(e.target.value)}
-          placeholder={isWayMB ? 'NIF / DNI (opcional)' : 'CPF (apenas números)'}
+          placeholder={isWayMB ? 'NIF' : 'CPF (apenas números)'}
           maxLength={isWayMB ? 20 : 11}
           className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
         />
@@ -439,7 +476,7 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder={isWayMB ? 'Correo electrónico' : 'E-mail'}
+          placeholder="E-mail"
           autoComplete="email"
           className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
         />
@@ -460,16 +497,26 @@ function PixStep({ slug, event, onDismiss, onPaid, currency = 'BRL', paymentGate
             className="w-full bg-[#2a3942] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-[#25d366]"
           />
         )}
+        {formError && (
+          <p className="text-red-400 text-xs text-center bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2.5">{formError}</p>
+        )}
         <button
           type="submit"
           className="w-full py-3.5 rounded-xl font-semibold text-white text-base transition-opacity hover:opacity-90"
           style={{ backgroundColor: btnColor }}
         >
-          {isWayMB ? 'Elegir método de pago →' : (event.button_text ?? 'Pagar agora')}
+          {event.button_text ?? 'Pagar agora'}
         </button>
       </form>
 
-      <p className="text-center text-gray-600 text-xs">{t('secure_note', 'Pagamento Seguro • Seus dados estão seguros', 'Pago Seguro • Tus datos están protegidos')}</p>
+      {isWayMB && (
+        <button onClick={() => { setFormError(''); setStep('method'); }}
+          className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors text-center">
+          ← Trocar método de pagamento
+        </button>
+      )}
+
+      <p className="text-center text-gray-600 text-xs">{t('secure_note', 'Pagamento Seguro • Seus dados estão seguros', 'Pagamento Seguro • Os seus dados estão protegidos')}</p>
     </div>
   );
 }
@@ -643,7 +690,7 @@ function SignalDropOverlay({ event, onDismiss }: { event: PublicEvent; onDismiss
 
 function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', paymentGateway = 'zuckpay' }: { event: PublicEvent; onDismiss: () => void; slug: string; currency?: string; paymentGateway?: 'zuckpay' | 'waymb' }) {
   const isWayMB = paymentGateway === 'waymb';
-  // WayMB atende leads em espanhol — defaults ES; extra_texts tem prioridade.
+  // WayMB atende leads em Portugal — defaults pt-PT; extra_texts tem prioridade.
   const t = (key: string, pt: string, es: string) => xt(event, key, isWayMB ? es : pt);
   type Phase = 'lost' | 'trying' | 'failed' | 'payment';
   const [phase, setPhase] = useState<Phase>('lost');
@@ -683,8 +730,8 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
         </div>
         <div className="text-center space-y-2">
-          <p className="text-white text-xl font-bold">{t('lost_title', 'Sem conexão', 'Sin conexión')}</p>
-          <p className="text-gray-400 text-sm">{t('lost_subtitle', 'Verificando a rede', 'Verificando la red')}{dots}</p>
+          <p className="text-white text-xl font-bold">{t('lost_title', 'Sem conexão', 'Sem ligação')}</p>
+          <p className="text-gray-400 text-sm">{t('lost_subtitle', 'Verificando a rede', 'A verificar a rede')}{dots}</p>
         </div>
       </div>
     );
@@ -701,8 +748,8 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           </svg>
         </div>
         <div className="text-center space-y-1">
-          <p className="text-white text-lg font-semibold">{t('trying_title', 'Reconectando', 'Reconectando')}{dots}</p>
-          <p className="text-gray-500 text-sm">{t('trying_subtitle', 'Tentativa', 'Intento')} {attempt} de 3</p>
+          <p className="text-white text-lg font-semibold">{t('trying_title', 'Reconectando', 'A reconectar')}{dots}</p>
+          <p className="text-gray-500 text-sm">{t('trying_subtitle', 'Tentativa', 'Tentativa')} {attempt} de 3</p>
         </div>
         <div className="flex gap-2">
           {[1,2,3].map(i => (
@@ -723,10 +770,10 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           </svg>
         </div>
         <div className="text-center space-y-2">
-          <p className="text-white text-xl font-bold">{t('failed_title', 'Conexão instável', 'Conexión inestable')}</p>
+          <p className="text-white text-xl font-bold">{t('failed_title', 'Conexão instável', 'Ligação instável')}</p>
           <p className="text-gray-400 text-sm text-center">
             {event.description || (isWayMB
-              ? 'Tu conexión se ha interrumpido. Para restaurar la llamada, es necesario continuar con el paquete de conexión.'
+              ? 'A sua ligação foi interrompida. Para restaurar a chamada, é necessário continuar com o pacote de ligação.'
               : 'Sua conexão foi interrompida. Para restaurar a chamada, é necessário continuar com o pacote de conexão.')}
           </p>
         </div>
@@ -735,9 +782,9 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           className="w-full max-w-xs py-4 rounded-2xl font-bold text-white text-base bg-[#25d366] active:opacity-90 transition-opacity shadow-lg"
           style={{ backgroundColor: event.button_color ?? '#25d366' }}
         >
-          {event.button_text || (isWayMB ? 'Restaurar llamada' : 'Restaurar chamada')}
+          {event.button_text || (isWayMB ? 'Restaurar chamada' : 'Restaurar chamada')}
         </button>
-        <p className="text-gray-600 text-xs text-center">{t('secure_note', '🔒 Pagamento seguro', '🔒 Pago seguro')}</p>
+        <p className="text-gray-600 text-xs text-center">{t('secure_note', '🔒 Pagamento seguro', '🔒 Pagamento seguro')}</p>
       </div>
     );
   }
@@ -753,7 +800,7 @@ function ReconnectPaywallOverlay({ event, onDismiss, slug, currency = 'BRL', pay
           </svg>
         </div>
         <div>
-          <span className="text-white font-semibold text-sm">{isWayMB ? 'Restaurar llamada' : 'Restaurar chamada'}</span>
+          <span className="text-white font-semibold text-sm">{isWayMB ? 'Restaurar chamada' : 'Restaurar chamada'}</span>
           <p className="text-[#8696a0] text-xs">{isWayMB ? 'Pago vía WayMB' : 'Pagamento via PIX'}</p>
         </div>
       </div>

@@ -29,6 +29,7 @@ var validEventTypes = map[string]bool{
 	domain.EventTypeTipJar:          true,
 	domain.EventTypeVideoLock:       true,
 	domain.EventTypePhoneBlock:      true,
+	domain.EventTypeAgeGate:         true,
 }
 
 type CreateEventInput struct {

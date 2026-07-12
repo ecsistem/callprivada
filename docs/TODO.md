@@ -319,11 +319,16 @@ Regras:
 ## WayMB — coleta de dados no evento de cobrança (2026-07-12)
 - [x] `EventOverlay.tsx` (`PixStep`) — com gateway WayMB sempre coleta os dados do pagador (telemóvel obrigatório) e mostra a escolha de método (MB WAY / Multibanco), como na ligação por minutos; antes disparava automaticamente com dados falsos e método fixo mbway.
 
-## WayMB — textos em espanhol (2026-07-12)
-- [x] `EventOverlay.tsx` — todos os textos do fluxo de pagamento em espanhol quando o gateway é WayMB (formulário, escolha de método, loading, erro, pago, Multibanco, reconnect paywall); PIX permanece em português. `extra_texts` continua tendo prioridade.
-- [x] `CreditsOverlay.tsx` — telas WayMB (dados do pagador, método, aguardando pagamento, Multibanco) traduzidas para espanhol.
+## WayMB — textos em português do Brasil (2026-07-12)
+- [x] `EventOverlay.tsx` — todos os textos do fluxo de pagamento em português do Brasil quando o gateway é WayMB (formulário, escolha de método, loading, erro, pago, Multibanco, reconnect paywall); PIX permanece em português. `extra_texts` continua tendo prioridade.
+- [x] `CreditsOverlay.tsx` — telas WayMB (dados do pagador, método, aguardando pagamento, Multibanco) traduzidas para português do Brasil.
 
 ## WayMB — select de DDI com bandeira + fix tracking (2026-07-12)
 - [x] `models/user_tracking_config.go` — tags `column:tiktok_pixel_id` e `column:utmify_token` (GORM gerava `tik_tok_pixel_id`/`ut_mify_token` e o PUT /settings/tracking retornava 500).
 - [x] `components/PhoneInput.tsx` — novo componente: select de país (bandeira + DDI, padrão 🇵🇹 +351, ~35 países europeus) + input de número; emite `+DDInúmero`.
 - [x] `EventOverlay.tsx` e `CreditsOverlay.tsx` — telefone do checkout WayMB usa o `PhoneInput`.
+- [x] Textos WayMB trocados de espanhol para português de Portugal (`EventOverlay.tsx`, `CreditsOverlay.tsx`).
+- [x] Editor de vídeo: seção "✏️ Textos avançados" no painel de propriedades do evento (`VideoEditorPage.tsx`); registry movido para `lib/eventExtraTexts.ts` (compartilhado com `TimelineEditorPage.tsx`).
+- [x] WayMB: fluxo invertido (método → formulário), NIF e todos os campos obrigatórios, mensagens de erro detalhadas da API (`EventOverlay.tsx`, `CreditsOverlay.tsx`).
+- [x] WayMB Multibanco: gera direto sem formulário de dados (payer com placeholders — a referência não depende do pagador); MB WAY continua exigindo os dados (`EventOverlay.tsx`, `CreditsOverlay.tsx`).
+- [x] Fix: `age_gate` faltava no mapa `validEventTypes` do `call_event_service.go` — criação do evento "Verificação de idade" era rejeitada ("tipo de evento inválido"). Pendente: rebuild do container backend (tracking fix + este).

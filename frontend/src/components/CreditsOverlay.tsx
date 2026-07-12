@@ -127,7 +127,9 @@ export default function CreditsOverlay({
   async function generatePix(pkg: CreditPackage) {
     if (activeGateway === 'waymb') {
       setSelected(pkg);
-      setMode('payer');
+      setErrMsg('');
+      // Primeiro o método de pagamento, depois os dados do pagador.
+      setMode('method');
       return;
     }
     setLoading(true);
@@ -149,24 +151,38 @@ export default function CreditsOverlay({
     }
   }
 
+  // Extrai a mensagem de erro real da API para explicar o que falhou.
+  function apiErrorMessage(err: unknown, fallback: string): string {
+    const resp = (err as { response?: { status?: number; data?: { error?: { message?: string } } } })?.response;
+    const apiMsg = resp?.data?.error?.message;
+    if (apiMsg) return apiMsg;
+    if (resp?.status === 400) return 'Dados inválidos. Verifique o telemóvel e o NIF e tente novamente.';
+    if (resp?.status === 402 || resp?.status === 422) return 'O pagamento foi recusado pelo gateway. Verifique os dados e tente novamente.';
+    if (resp && (resp.status ?? 0) >= 500) return 'O serviço de pagamento está indisponível no momento. Tente novamente em instantes.';
+    if (!resp) return 'Sem ligação ao servidor. Verifique a sua internet e tente novamente.';
+    return fallback;
+  }
+
   async function generateWayMB(method: WayMBMethod) {
     setWaymbMethod(method);
     setLoading(true);
     setErrMsg('');
     try {
+      // Multibanco não usa os dados do pagador (só entidade + referência) —
+      // envia placeholders quando o formulário foi pulado.
       const r = await createWayMBPayment(slug, selected.price_cents, method, {
-        payer_name:     payerName     || 'Visitante',
-        payer_document: payerDocument || '000000000',
-        payer_email:    payerEmail    || 'lead@callprivada.app',
-        payer_phone:    payerPhone    || '+351900000000',
+        payer_name:     payerName.trim()     || 'Visitante',
+        payer_document: payerDocument.trim() || '999999990',
+        payer_email:    payerEmail.trim()    || 'lead@callprivada.app',
+        payer_phone:    payerPhone.trim(),
       });
       setTxnId(r.transaction_id);
       setMultibancoEntity(r.multibanco_entity ?? '');
       setMultibancoReference(r.multibanco_reference ?? '');
       setMode('waymb');
       startPolling(r.transaction_id, 'waymb');
-    } catch {
-      setErrMsg('No se pudo iniciar el pago. Inténtalo de nuevo.');
+    } catch (err) {
+      setErrMsg(apiErrorMessage(err, 'Não foi possível iniciar o pagamento. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -289,37 +305,46 @@ export default function CreditsOverlay({
   // ── Dados do pagador (WayMB) ───────────────────────────────────────────
   if (mode === 'payer') {
     const fieldCls = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/50 transition-all";
-    const canProceed = payerName.trim() && payerEmail.trim() && payerPhone.trim();
+    const canProceed = payerName.trim() && payerEmail.trim() && payerPhone.trim() && payerDocument.trim();
+    function payerValidationMsg(): string {
+      if (!payerName.trim()) return 'Preencha o nome completo.';
+      if (!/^\S+@\S+\.\S+$/.test(payerEmail.trim())) return 'Preencha um e-mail válido.';
+      if (!payerPhone.trim() || payerPhone.replace(/\D/g, '').length < 9) return 'Preencha um telemóvel válido (com indicativo do país).';
+      if (!payerDocument.trim()) return 'Preencha o NIF.';
+      return '';
+    }
     return (
       <FullscreenPanel>
         <div className="text-center mb-5">
-          <p className="text-white font-bold text-lg">Datos para el pago</p>
-          <p className="text-gray-400 text-xs mt-1">{fmt(selected.price_cents)} · {selected.label}</p>
+          <p className="text-white font-bold text-lg">Dados para o pagamento</p>
+          <p className="text-gray-400 text-xs mt-1">
+            {fmt(selected.price_cents)} · {selected.label} · {waymbMethod === 'mbway' ? '📱 MB WAY' : '🏧 Multibanco'}
+          </p>
         </div>
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-xs text-gray-500 font-medium">Nombre completo *</label>
+            <label className="text-xs text-gray-500 font-medium">Nome completo *</label>
             <input
               value={payerName}
               onChange={e => setPayerName(e.target.value)}
-              placeholder="Juan García"
+              placeholder="João Silva"
               className={fieldCls}
               autoComplete="name"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-gray-500 font-medium">Correo electrónico *</label>
+            <label className="text-xs text-gray-500 font-medium">E-mail *</label>
             <input
               type="email"
               value={payerEmail}
               onChange={e => setPayerEmail(e.target.value)}
-              placeholder="juan@ejemplo.com"
+              placeholder="joao@exemplo.com"
               className={fieldCls}
               autoComplete="email"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-gray-500 font-medium">Teléfono móvil *</label>
+            <label className="text-xs text-gray-500 font-medium">Telefone celular *</label>
             <PhoneInput
               value={payerPhone}
               onChange={setPayerPhone}
@@ -329,11 +354,11 @@ export default function CreditsOverlay({
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-gray-500 font-medium">NIF / DNI</label>
+            <label className="text-xs text-gray-500 font-medium">NIF *</label>
             <input
               value={payerDocument}
               onChange={e => setPayerDocument(e.target.value)}
-              placeholder="12345678A"
+              placeholder="123456789"
               className={fieldCls}
               autoComplete="off"
             />
@@ -341,15 +366,22 @@ export default function CreditsOverlay({
         </div>
         {errMsg && <p className="text-red-400 text-xs text-center mt-3">{errMsg}</p>}
         <button
-          onClick={() => { if (canProceed) { setErrMsg(''); setMode('method'); } else { setErrMsg('Completa nombre, correo y teléfono móvil.'); } }}
-          className="w-full py-4 rounded-2xl font-bold text-white text-base mt-5 transition-all active:scale-95"
+          onClick={() => {
+            const v = payerValidationMsg();
+            if (v) { setErrMsg(v); return; }
+            setErrMsg('');
+            generateWayMB(waymbMethod);
+          }}
+          disabled={loading}
+          className="w-full py-4 rounded-2xl font-bold text-white text-base mt-5 transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2"
           style={{ background: canProceed ? 'linear-gradient(135deg,#FE015C,#c8004a)' : 'rgba(255,255,255,0.08)', opacity: canProceed ? 1 : 0.7 }}
         >
-          Elegir método de pago →
+          {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+          {loading ? 'A gerar o pagamento…' : 'Pagar agora'}
         </button>
-        <button onClick={() => setMode('select')}
+        <button onClick={() => { setErrMsg(''); setMode('method'); }}
           className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors pt-3 text-center">
-          ← Volver
+          ← Trocar método de pagamento
         </button>
       </FullscreenPanel>
     );
@@ -358,13 +390,13 @@ export default function CreditsOverlay({
   // ── Seleção de método WayMB ────────────────────────────────────────────
   if (mode === 'method') {
     const methods: { id: WayMBMethod; label: string; desc: string; icon: string }[] = [
-      { id: 'mbway',      label: 'MB WAY',     desc: 'Aprobación en la app MB WAY',            icon: '📱' },
-      { id: 'multibanco', label: 'Multibanco', desc: 'Entidad + referencia para cajero/banca', icon: '🏧' },
+      { id: 'mbway',      label: 'MB WAY',     desc: 'Confirmação no app MB WAY',             icon: '📱' },
+      { id: 'multibanco', label: 'Multibanco', desc: 'Entidade + referência para caixa/banco', icon: '🏧' },
     ];
     return (
       <FullscreenPanel>
         <div className="text-center mb-5">
-          <p className="text-white font-bold text-xl">¿Cómo deseas pagar?</p>
+          <p className="text-white font-bold text-xl">Como você deseja pagar?</p>
           <p className="text-gray-400 text-sm mt-1">{fmt(selected.price_cents)} · {selected.label}</p>
         </div>
         {errMsg && <p className="text-red-400 text-xs text-center mb-3">{errMsg}</p>}
@@ -372,7 +404,13 @@ export default function CreditsOverlay({
           {methods.map(m => (
             <button
               key={m.id}
-              onClick={() => generateWayMB(m.id)}
+              onClick={() => {
+                setWaymbMethod(m.id);
+                setErrMsg('');
+                // Multibanco gera direto (entidade + referência) — sem formulário.
+                if (m.id === 'multibanco') generateWayMB('multibanco');
+                else setMode('payer');
+              }}
               disabled={loading}
               className="w-full flex items-center gap-4 p-4 rounded-xl border border-white/10 hover:border-[#FE015C]/50 hover:bg-[#FE015C]/5 transition-all disabled:opacity-60 text-left"
             >
@@ -389,7 +427,7 @@ export default function CreditsOverlay({
         </div>
         <button onClick={() => setMode('select')}
           className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors pt-4 text-center">
-          ← Volver
+          ← Voltar
         </button>
       </FullscreenPanel>
     );
@@ -409,9 +447,9 @@ export default function CreditsOverlay({
         {isMbway && (
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center space-y-2 mb-4">
             <div className="text-3xl">📱</div>
-            <p className="text-white font-semibold text-sm">Aprobación enviada al MB WAY</p>
+            <p className="text-white font-semibold text-sm">Confirmação enviada ao app MB WAY</p>
             <p className="text-gray-500 text-xs leading-relaxed">
-              Abre tu app MB WAY y aprueba el pago de {fmt(selected.price_cents)}.
+              Abra o app MB WAY e confirme o pagamento de {fmt(selected.price_cents)}.
             </p>
             <div className="flex items-center justify-center gap-1.5 pt-1">
               <div className="w-1.5 h-1.5 rounded-full bg-[#FE015C] animate-bounce" style={{ animationDelay: '0s' }} />
@@ -425,23 +463,23 @@ export default function CreditsOverlay({
           <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3 mb-4">
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xl">🏧</span>
-              <p className="text-white font-semibold text-sm">Datos para el pago</p>
+              <p className="text-white font-semibold text-sm">Dados para o pagamento</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="bg-white/5 rounded-lg p-3">
-                <p className="text-gray-500 text-xs mb-1">Entidad</p>
+                <p className="text-gray-500 text-xs mb-1">Entidadee</p>
                 <p className="text-white font-mono font-bold text-lg">{multibancoEntity || '—'}</p>
               </div>
               <div className="bg-white/5 rounded-lg p-3">
-                <p className="text-gray-500 text-xs mb-1">Referencia</p>
+                <p className="text-gray-500 text-xs mb-1">Referência</p>
                 <p className="text-white font-mono font-bold text-base tracking-wider">{multibancoReference || '—'}</p>
               </div>
             </div>
             <div className="bg-white/5 rounded-lg p-3">
-              <p className="text-gray-500 text-xs mb-1">Importe</p>
+                <p className="text-gray-500 text-xs mb-1">Valor</p>
               <p className="text-white font-bold">{fmt(selected.price_cents)}</p>
             </div>
-            <p className="text-gray-600 text-xs text-center">Paga en el cajero o banca online con estos datos</p>
+              <p className="text-gray-600 text-xs text-center">Pague no caixa eletrônico ou no banco on-line com estes dados</p>
           </div>
         )}
 
@@ -453,12 +491,12 @@ export default function CreditsOverlay({
         >
           {loading ? (
             <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verificando…</>
-          ) : 'Ya realicé el pago'}
+          ) : 'Já realizei o pagamento'}
         </button>
 
         <button onClick={() => { stopPolling(); setMode('method'); }}
           className="block w-full text-xs text-gray-600 hover:text-gray-400 transition-colors pt-3 text-center">
-          ← Cambiar método
+          ← Trocar método
         </button>
       </FullscreenPanel>
     );

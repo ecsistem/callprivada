@@ -34,6 +34,7 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { formatPrice } from '../lib/currency';
+import { EXTRA_TEXT_FIELDS } from '../lib/eventExtraTexts';
 import { getCall, getPublicCall, updateCall, type Call, type PublicCall } from '../services/callService';
 import {
   createEvent,
@@ -705,7 +706,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 
 function EventPropsPanel({ event, onChange, onDelete }: {
   event: CallEvent | null;
-  onChange: (field: string, val: string | number) => void;
+  onChange: (field: string, val: string | number | Record<string, string>) => void;
   onDelete: () => void;
 }) {
   if (!event) return (
@@ -930,6 +931,29 @@ function EventPropsPanel({ event, onChange, onDelete }: {
               onChange={v => onChange('button_color', v)}
             />
           </div>
+        )}
+
+        {/* ── Textos avançados — todos os textos do overlay são editáveis ── */}
+        {(EXTRA_TEXT_FIELDS[event.type]?.length ?? 0) > 0 && (
+          <details className="border-t border-white/5 pt-3 group">
+            <summary className="cursor-pointer text-[10px] font-semibold text-gray-500 hover:text-white uppercase tracking-wider transition-colors select-none list-none flex items-center gap-1">
+              <span className="inline-block transition-transform group-open:rotate-90">▸</span>
+              ✏️ Textos avançados
+            </summary>
+            <div className="space-y-2 mt-2.5">
+              {EXTRA_TEXT_FIELDS[event.type]!.map(f => (
+                <Field key={f.key} label={f.label}>
+                  <input
+                    value={event.extra_texts?.[f.key] ?? ''}
+                    onChange={e => onChange('extra_texts', { ...(event.extra_texts ?? {}), [f.key]: e.target.value })}
+                    placeholder={f.def || '(padrão do sistema)'}
+                    className={inputCls}
+                  />
+                </Field>
+              ))}
+              <p className="text-[9px] text-gray-600">Vazio = texto padrão do sistema.</p>
+            </div>
+          </details>
         )}
       </div>
     </div>
@@ -1263,7 +1287,7 @@ export default function VideoEditorPage() {
     } catch {}
   };
 
-  const updateLocalEvent = useCallback((field: string, val: string | number) => {
+  const updateLocalEvent = useCallback((field: string, val: string | number | Record<string, string>) => {
     setLocalEvents(prev => {
       const updated = prev.map(ev => ev.id === selectedId ? { ...ev, [field]: val } : ev);
       const updatedEv = updated.find(e => e.id === selectedId);
