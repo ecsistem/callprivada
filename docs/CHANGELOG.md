@@ -3,6 +3,15 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-12c] — WayMB: tolerância para `referenceData.expiresAt`
+
+### Backend
+- `backend/internal/waymb/client.go` — `ReferenceData.ExpiresAt` agora usa um tipo próprio que aceita `expiresAt` como número ou string na resposta da API.
+- `backend/internal/services/billing_service.go` — cast explícito para `int64` ao persistir/expor `multibanco_expires_at`.
+
+### Validação
+- `go test ./internal/waymb ./internal/services` — ok.
+
 ## [2026-07-12b] — Dashboard: filtro por data personalizado; Downsell: bloco de preço e design system
 
 ### Backend

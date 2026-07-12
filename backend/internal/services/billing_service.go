@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 
 	"github.com/callprivada/fwlc-backend/internal/domain"
@@ -11,9 +12,9 @@ import (
 )
 
 type BillingService struct {
-	calls    domain.CallRepository
-	configs  domain.PaymentConfigRepository
-	txns     domain.BillingTransactionRepository
+	calls       domain.CallRepository
+	configs     domain.PaymentConfigRepository
+	txns        domain.BillingTransactionRepository
 	webhookBase string // PUBLIC_BASE_URL do backend (para urlnoty)
 }
 
@@ -38,18 +39,18 @@ type CreateBillingInput struct {
 }
 
 type BillingResult struct {
-	TransactionID       string  `json:"transaction_id"`
-	Gateway             string  `json:"gateway"`
-	ZuckPayTxnID        string  `json:"zuckpay_txn_id,omitempty"`
-	WayMBTxnID          string  `json:"waymb_txn_id,omitempty"`
-	WayMBMethod         string  `json:"waymb_method,omitempty"`
-	MultibancoEntity    string  `json:"multibanco_entity,omitempty"`
-	MultibancoReference string  `json:"multibanco_reference,omitempty"`
-	MultibancoExpiresAt int64   `json:"multibanco_expires_at,omitempty"`
-	QRCode              string  `json:"qr_code,omitempty"`
-	QRCodeURL           string  `json:"qr_code_url,omitempty"`
-	CheckoutURL         string  `json:"checkout_url,omitempty"`
-	AmountCents         int     `json:"amount_cents"`
+	TransactionID       string `json:"transaction_id"`
+	Gateway             string `json:"gateway"`
+	ZuckPayTxnID        string `json:"zuckpay_txn_id,omitempty"`
+	WayMBTxnID          string `json:"waymb_txn_id,omitempty"`
+	WayMBMethod         string `json:"waymb_method,omitempty"`
+	MultibancoEntity    string `json:"multibanco_entity,omitempty"`
+	MultibancoReference string `json:"multibanco_reference,omitempty"`
+	MultibancoExpiresAt int64  `json:"multibanco_expires_at,omitempty"`
+	QRCode              string `json:"qr_code,omitempty"`
+	QRCodeURL           string `json:"qr_code_url,omitempty"`
+	CheckoutURL         string `json:"checkout_url,omitempty"`
+	AmountCents         int    `json:"amount_cents"`
 }
 
 func (s *BillingService) CreatePIX(ctx context.Context, in CreateBillingInput) (*BillingResult, error) {
@@ -232,14 +233,14 @@ func (s *BillingService) CreateWayMBPayment(ctx context.Context, in CreateBillin
 	}
 
 	txn := &domain.BillingTransaction{
-		CallID:      call.ID,
-		Gateway:     "waymb",
-		WayMBMethod: method,
-		AmountCents: in.AmountCents,
-		Status:      "PENDING",
-		PayerName:   in.PayerName,
+		CallID:        call.ID,
+		Gateway:       "waymb",
+		WayMBMethod:   method,
+		AmountCents:   in.AmountCents,
+		Status:        "PENDING",
+		PayerName:     in.PayerName,
 		PayerDocument: in.PayerDocument,
-		PayerEmail:  in.PayerEmail,
+		PayerEmail:    in.PayerEmail,
 	}
 	if err := s.txns.Create(ctx, txn); err != nil {
 		return nil, err
@@ -276,11 +277,11 @@ func (s *BillingService) CreateWayMBPayment(ctx context.Context, in CreateBillin
 	if resp.ReferenceData != nil {
 		result.MultibancoEntity = resp.ReferenceData.Entity
 		result.MultibancoReference = resp.ReferenceData.Reference
-		result.MultibancoExpiresAt = resp.ReferenceData.ExpiresAt
+		result.MultibancoExpiresAt = int64(resp.ReferenceData.ExpiresAt)
 		_ = s.txns.UpdateWayMBMultibancoData(ctx, txn.ID,
 			resp.ReferenceData.Entity,
 			resp.ReferenceData.Reference,
-			resp.ReferenceData.ExpiresAt,
+			int64(resp.ReferenceData.ExpiresAt),
 		)
 	}
 	return result, nil

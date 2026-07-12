@@ -21,6 +21,7 @@ Regras:
 - [x] `age_gate` adicionado como evento de verificação +18 com cobrança PIX.
 - [x] Propagação de moeda (BRL/EUR/USD/GBP) em todas as páginas do frontend.
 - [x] WayMB: webhook lookup por `waymb_txn_id`, auth no body, persistência de dados Multibanco.
+- [x] WayMB: `referenceData.expiresAt` agora aceita string ou número ao desserializar a resposta da API.
 - [x] Limite `max_videos` do plano aplicado no upload de vídeo (backend + frontend badge).
 
 ### Tarefas do escopo anterior (CallPrivada genérico) — obsoletas

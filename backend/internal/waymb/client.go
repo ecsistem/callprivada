@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -38,31 +39,62 @@ type Payer struct {
 }
 
 type CreateTransactionRequest struct {
-	Method             string `json:"method"` // mbway | multibanco | bizum
+	Method             string  `json:"method"` // mbway | multibanco | bizum
 	Amount             float64 `json:"amount"`
-	Payer              Payer  `json:"payer"`
-	PaymentDescription string `json:"paymentDescription,omitempty"`
-	Currency           string `json:"currency,omitempty"`
-	CallbackURL        string `json:"callbackUrl,omitempty"`
-	SuccessURL         string `json:"success_url,omitempty"`
-	FailedURL          string `json:"failed_url,omitempty"`
+	Payer              Payer   `json:"payer"`
+	PaymentDescription string  `json:"paymentDescription,omitempty"`
+	Currency           string  `json:"currency,omitempty"`
+	CallbackURL        string  `json:"callbackUrl,omitempty"`
+	SuccessURL         string  `json:"success_url,omitempty"`
+	FailedURL          string  `json:"failed_url,omitempty"`
 }
 
 type ReferenceData struct {
-	Entity    string `json:"entity"`
-	Reference string `json:"reference"`
-	ExpiresAt int64  `json:"expiresAt"`
+	Entity    string      `json:"entity"`
+	Reference string      `json:"reference"`
+	ExpiresAt UnixSeconds `json:"expiresAt"`
+}
+
+type UnixSeconds int64
+
+func (u *UnixSeconds) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*u = 0
+		return nil
+	}
+
+	var numeric int64
+	if err := json.Unmarshal(data, &numeric); err == nil {
+		*u = UnixSeconds(numeric)
+		return nil
+	}
+
+	var text string
+	if err := json.Unmarshal(data, &text); err == nil {
+		if text == "" {
+			*u = 0
+			return nil
+		}
+		numeric, err := strconv.ParseInt(text, 10, 64)
+		if err != nil {
+			return fmt.Errorf("waymb: invalid expiresAt %q: %w", text, err)
+		}
+		*u = UnixSeconds(numeric)
+		return nil
+	}
+
+	return fmt.Errorf("waymb: invalid expiresAt payload: %s", string(data))
 }
 
 type CreateTransactionResponse struct {
-	StatusCode    int           `json:"statusCode"`
-	Message       string        `json:"message"`
-	TransactionID string        `json:"transactionID"`
-	ID            string        `json:"id"`
-	Amount        float64       `json:"amount"`
-	Method        string        `json:"method"`
-	ReferenceData *ReferenceData `json:"referenceData,omitempty"`
-	GeneratedMBWay bool         `json:"generatedMBWay,omitempty"`
+	StatusCode     int            `json:"statusCode"`
+	Message        string         `json:"message"`
+	TransactionID  string         `json:"transactionID"`
+	ID             string         `json:"id"`
+	Amount         float64        `json:"amount"`
+	Method         string         `json:"method"`
+	ReferenceData  *ReferenceData `json:"referenceData,omitempty"`
+	GeneratedMBWay bool           `json:"generatedMBWay,omitempty"`
 }
 
 type TransactionInfo struct {
