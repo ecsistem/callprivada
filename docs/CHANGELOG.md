@@ -3,6 +3,16 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-13c] — Fix: excluir plano com assinaturas dava erro silencioso
+
+### Backend
+- `domain/errors.go`: `ErrPlanInUse`. `domain/subscription.go` + `repositories/subscription_repository.go`: `CountByPlan(planID)`.
+- `services/subscription_service.go` `DeletePlan`: conta assinaturas do plano; se >0, retorna `ErrPlanInUse` (a FK `subscriptions.plan_id` impediria o DELETE e gerava 500). Hard-delete só quando não há assinantes.
+- `handlers/errors.go`: `ErrPlanInUse` → 409 com mensagem "este plano tem assinaturas e não pode ser excluído. Desative-o em vez de excluir."
+
+### Frontend
+- `pages/AdminPage.tsx` (PlansTab): exibe a mensagem de erro da exclusão inline (antes falhava em silêncio) e oferece o botão "Desativar plano em vez disso" (updatePlan active=false), que atende ao objetivo do admin sem quebrar assinaturas existentes.
+
 ## [2026-07-13b] — Endpoint para reotimizar vídeos já enviados
 
 ### Backend

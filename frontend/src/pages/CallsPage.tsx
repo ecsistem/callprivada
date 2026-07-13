@@ -221,7 +221,7 @@ export default function CallsPage() {
           </p>
         </div>
         <Link to="/calls/new"
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-green-900/30">
+          className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-[#FE015C]/20">
           <Plus size={16} />
           Novo funil
         </Link>
@@ -255,7 +255,7 @@ export default function CallsPage() {
           </p>
           <p className="text-gray-700 text-xs mb-7">Funciona em página de obrigado, story, direct e e-mail</p>
           <Link to="/calls/new"
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-5 py-3 rounded-xl transition-all shadow-lg shadow-green-900/30">
+            className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white text-sm font-semibold px-5 py-3 rounded-xl transition-all shadow-lg shadow-[#FE015C]/20">
             <Plus size={16} />
             Criar primeiro funil
           </Link>

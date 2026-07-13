@@ -43,6 +43,8 @@ func respondError(c *gin.Context, err error) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "unsupported_payment_method", "message": "método de pagamento não suportado"}})
 	case errors.Is(err, domain.ErrPlanLimitReached):
 		c.JSON(http.StatusForbidden, gin.H{"error": gin.H{"code": "plan_limit_reached", "message": "limite do plano atingido — faça upgrade para continuar criando"}})
+	case errors.Is(err, domain.ErrPlanInUse):
+		c.JSON(http.StatusConflict, gin.H{"error": gin.H{"code": "plan_in_use", "message": "este plano tem assinaturas e não pode ser excluído. Desative-o em vez de excluir."}})
 	case errors.Is(err, domain.ErrPendingApproval):
 		c.JSON(http.StatusAccepted, gin.H{"status": "pending_approval"})
 	default:

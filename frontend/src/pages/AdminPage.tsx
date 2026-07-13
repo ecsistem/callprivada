@@ -182,9 +182,24 @@ function PlansTab() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-plans'] }); setEditingId(null); },
   });
 
+  const [deleteError, setDeleteError] = useState<{ id: string; message: string } | null>(null);
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteAdminPlan(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-plans'] }),
+    onSuccess: () => { setDeleteError(null); qc.invalidateQueries({ queryKey: ['admin-plans'] }); },
+    onError: (err: unknown, id) => {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      setDeleteError({ id, message: msg ?? 'Erro ao excluir plano.' });
+    },
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: (p: Plan) => updatePlan(p.id, {
+      name: p.name, price_cents: p.price_cents, interval: p.interval,
+      abacate_pay_product_id: p.abacate_pay_product_id || '',
+      active: false, max_calls: p.max_calls, max_presells: p.max_presells, max_videos: p.max_videos,
+    }),
+    onSuccess: () => { setDeleteError(null); qc.invalidateQueries({ queryKey: ['admin-plans'] }); },
   });
 
   const startEdit = (p: Plan) => {
@@ -277,6 +292,23 @@ function PlansTab() {
                 <span className="text-gray-400">Presells: <span className="text-white font-medium">{p.max_presells === 0 ? '∞' : p.max_presells}</span></span>
                 <span className="text-gray-400">Vídeos: <span className="text-white font-medium">{p.max_videos === 0 ? '∞' : p.max_videos}</span></span>
               </div>
+              {deleteError?.id === p.id && (
+                <div className="flex items-start gap-2.5 text-amber-400 text-xs bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <p>{deleteError.message}</p>
+                    {p.active && (
+                      <button
+                        onClick={() => deactivateMutation.mutate(p)}
+                        disabled={deactivateMutation.isPending}
+                        className="mt-1.5 font-semibold text-amber-300 hover:text-amber-200 underline disabled:opacity-50"
+                      >
+                        {deactivateMutation.isPending ? 'Desativando…' : 'Desativar plano em vez disso'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

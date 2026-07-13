@@ -121,3 +121,11 @@ func (r *subscriptionRepository) CountActive() (int64, error) {
 	err := r.db.Model(&models.Subscription{}).Where("status = ?", domain.SubscriptionStatusActive).Count(&count).Error
 	return count, err
 }
+
+// CountByPlan conta todas as assinaturas (qualquer status) que referenciam o
+// plano — usado para bloquear a exclusão que violaria a FK plan_id.
+func (r *subscriptionRepository) CountByPlan(planID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Subscription{}).Where("plan_id = ?", planID).Count(&count).Error
+	return count, err
+}

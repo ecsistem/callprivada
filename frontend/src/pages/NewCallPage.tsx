@@ -12,12 +12,12 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
-const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/60 focus:ring-1 focus:ring-[#FE015C]/20 transition-all";
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!value)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${value ? 'bg-green-500' : 'bg-white/10'}`}>
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${value ? 'bg-[#FE015C]' : 'bg-white/10'}`}>
       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
@@ -112,8 +112,8 @@ function StepBar({ current }: { current: number }) {
         return (
           <div key={i} className="flex items-center">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-              active ? 'bg-green-500/15 text-green-400 border border-green-500/30' :
-              done ? 'text-green-500' : 'text-gray-600'
+              active ? 'bg-[#FE015C]/15 text-[#FE015C] border border-[#FE015C]/30' :
+              done ? 'text-[#FE015C]' : 'text-gray-600'
             }`}>
               {done
                 ? <Check size={13} />
@@ -122,7 +122,7 @@ function StepBar({ current }: { current: number }) {
               <span className={active || done ? '' : 'hidden sm:inline'}>{s.label}</span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`h-px w-6 mx-1 transition-all ${done ? 'bg-green-500/40' : 'bg-white/5'}`} />
+              <div className={`h-px w-6 mx-1 transition-all ${done ? 'bg-[#FE015C]/40' : 'bg-white/5'}`} />
             )}
           </div>
         );
@@ -139,7 +139,7 @@ function VideoCard({ video, selected, onSelect }: { video: Video; selected: bool
       onClick={onSelect}
       className={`w-full text-left flex items-center gap-4 p-3 rounded-2xl border transition-all ${
         selected
-          ? 'bg-green-500/10 border-green-500/40 shadow-lg shadow-green-900/10'
+          ? 'bg-[#FE015C]/10 border-[#FE015C]/40 shadow-lg shadow-[#FE015C]/10'
           : 'bg-[#1c0510] border-white/5 hover:border-white/15 hover:bg-white/[0.03]'
       }`}
     >
@@ -154,7 +154,7 @@ function VideoCard({ video, selected, onSelect }: { video: Video; selected: bool
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium truncate ${selected ? 'text-green-300' : 'text-gray-200'}`}>
+        <p className={`text-sm font-medium truncate ${selected ? 'text-[#FD267D]' : 'text-gray-200'}`}>
           {video.original_name}
         </p>
         <div className="flex items-center gap-3 mt-0.5">
@@ -167,7 +167,7 @@ function VideoCard({ video, selected, onSelect }: { video: Video; selected: bool
 
       {/* Checkmark */}
       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-        selected ? 'border-green-500 bg-green-500' : 'border-white/10'
+        selected ? 'border-[#FE015C] bg-[#FE015C]' : 'border-white/10'
       }`}>
         {selected && <Check size={11} className="text-white" />}
       </div>
@@ -326,9 +326,9 @@ export default function NewCallPage() {
                   </div>
 
                   {selectedVideo && (
-                    <div className="bg-green-500/5 border border-green-500/20 rounded-2xl px-4 py-3 flex items-center gap-3">
-                      <Check size={14} className="text-green-400 shrink-0" />
-                      <p className="text-xs text-green-400">
+                    <div className="bg-[#FE015C]/5 border border-[#FE015C]/20 rounded-2xl px-4 py-3 flex items-center gap-3">
+                      <Check size={14} className="text-[#FE015C] shrink-0" />
+                      <p className="text-xs text-[#FE015C]">
                         <span className="font-semibold">{selectedVideo.original_name}</span> selecionado
                         {selectedVideo.duration_seconds ? ` · ${formatDuration(selectedVideo.duration_seconds)}` : ''}
                       </p>
@@ -341,8 +341,8 @@ export default function NewCallPage() {
               {step === 1 && (
                 <div className="bg-[#18181b] border border-white/5 rounded-2xl p-5 space-y-5">
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center">
-                      <User size={16} className="text-green-400" />
+                    <div className="w-9 h-9 rounded-xl bg-[#FE015C]/10 flex items-center justify-center">
+                      <User size={16} className="text-[#FE015C]" />
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-white">Identidade da chamada</p>
@@ -436,7 +436,7 @@ export default function NewCallPage() {
                             onClick={() => setCallMode(opt.value)}
                             className={`flex flex-col gap-1 p-3 rounded-xl border text-left transition-all ${
                               callMode === opt.value
-                                ? 'bg-green-500/10 border-green-500/40 text-white'
+                                ? 'bg-[#FE015C]/10 border-[#FE015C]/40 text-white'
                                 : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
                             }`}
                           >
@@ -505,12 +505,12 @@ export default function NewCallPage() {
                 {step < 2 ? (
                   <button type="button" onClick={goNext}
                     disabled={step === 0 && videos.length === 0}
-                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-green-900/30">
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-[#FE015C]/20">
                     Próximo <ArrowRight size={14} />
                   </button>
                 ) : (
                   <button type="submit" disabled={mutation.isPending}
-                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-green-900/30">
+                    className="flex-1 flex items-center justify-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-[#FE015C]/20">
                     {mutation.isPending ? (
                       <>
                         <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -542,7 +542,7 @@ export default function NewCallPage() {
               )}
               {displayName && (
                 <div className="flex items-center gap-2 bg-[#18181b] border border-white/5 rounded-xl px-3 py-2">
-                  <User size={12} className="text-green-400 shrink-0" />
+                  <User size={12} className="text-[#FE015C] shrink-0" />
                   <span className="text-xs text-gray-400 truncate">{displayName}</span>
                 </div>
               )}

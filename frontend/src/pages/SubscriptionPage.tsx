@@ -156,7 +156,7 @@ export default function SubscriptionPage() {
                 <div key={plan.id}
                   className={`relative rounded-2xl p-5 border transition-all ${
                     idx === 0
-                      ? 'bg-green-500/5 border-green-500/30 shadow-lg shadow-green-900/10'
+                      ? 'bg-green-500/5 border-green-500/30 shadow-lg shadow-[#FE015C]/10'
                       : 'bg-[#18181b] border-white/5 hover:border-white/10'
                   }`}
                 >
@@ -185,7 +185,7 @@ export default function SubscriptionPage() {
                       disabled={checkoutMutation.isPending}
                       className={`shrink-0 flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-xl transition-all disabled:opacity-50 ${
                         idx === 0
-                          ? 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/30'
+                          ? 'bg-[#FE015C] hover:bg-[#FD267D] text-white shadow-lg shadow-[#FE015C]/20'
                           : 'bg-white/10 hover:bg-white/15 text-white'
                       }`}
                     >

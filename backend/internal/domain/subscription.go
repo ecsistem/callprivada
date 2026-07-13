@@ -50,4 +50,5 @@ type SubscriptionRepository interface {
 	FindAll(page, perPage int) ([]*Subscription, int64, error)
 	FindAllWithEmail(page, perPage int) ([]*SubscriptionWithEmail, int64, error)
 	CountActive() (int64, error)
+	CountByPlan(planID uuid.UUID) (int64, error)
 }

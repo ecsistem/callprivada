@@ -206,5 +206,14 @@ func (s *SubscriptionService) HandleWebhookEvent(event string, abacatePaySubID s
 }
 
 func (s *SubscriptionService) DeletePlan(_ context.Context, planID uuid.UUID) error {
+	// A FK subscriptions.plan_id impede excluir um plano com assinaturas.
+	// Retorna um erro claro para o admin desativar o plano em vez de excluir.
+	count, err := s.subs.CountByPlan(planID)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return domain.ErrPlanInUse
+	}
 	return s.plans.Delete(planID)
 }

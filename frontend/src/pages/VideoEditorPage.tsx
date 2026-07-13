@@ -676,7 +676,7 @@ function EventsTrack({ events, zoom, selectedId, activeId, rows, numRows, onSele
 
 /* ─── Props Panel helpers ────────────────────────────────────────────────── */
 
-const inputCls = 'w-full bg-[#0d0d0d] border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-green-500/60 transition-colors';
+const inputCls = 'w-full bg-[#0d0d0d] border border-white/10 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#FE015C]/60 transition-colors';
 const labelCls = 'text-[10px] text-gray-500 mb-1 block font-medium uppercase tracking-wider';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -1374,7 +1374,7 @@ export default function VideoEditorPage() {
 
           {/* Save trim */}
           <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
-            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+            className="flex items-center gap-1.5 bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
             {saveTrimStatus === 'saved' ? <><Check className="w-3.5 h-3.5" />Salvo</> :
              saveTrimStatus === 'saving' ? 'Salvando…' :
              <><Check className="w-3.5 h-3.5" />Salvar corte</>}
@@ -1440,7 +1440,7 @@ export default function VideoEditorPage() {
             <SkipBack className="w-4 h-4" />
           </button>
           <button onClick={togglePlay}
-            className="w-8 h-8 rounded-full bg-green-600 hover:bg-green-500 flex items-center justify-center transition-colors shrink-0">
+            className="w-8 h-8 rounded-full bg-[#FE015C] hover:bg-[#FD267D] flex items-center justify-center transition-colors shrink-0">
             {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
           </button>
           <span className="text-xs font-mono text-gray-300 tabular-nums min-w-[96px]">

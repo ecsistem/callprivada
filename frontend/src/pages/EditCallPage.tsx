@@ -13,7 +13,7 @@ import { listEvents } from '../services/eventService';
 import { listPresells, listUpsells, listDownsells, getPresellsByCallId } from '../services/presellService';
 import { listVideos, type Video } from '../services/videoService';
 
-const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-green-500/60 focus:ring-1 focus:ring-green-500/20 transition-all";
+const inputCls = "w-full bg-[#1c0510] border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/60 focus:ring-1 focus:ring-[#FE015C]/20 transition-all";
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -768,7 +768,7 @@ export default function EditCallPage() {
 
         <div className="flex gap-3">
           <button type="submit" disabled={updateMutation.isPending}
-            className="flex-1 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-green-900/30">
+            className="flex-1 bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-50 text-white font-semibold rounded-xl py-3 text-sm transition-all shadow-lg shadow-[#FE015C]/20">
             {updateMutation.isPending ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

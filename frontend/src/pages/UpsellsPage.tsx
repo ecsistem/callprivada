@@ -63,7 +63,7 @@ export default function UpsellsPage() {
           <p className="text-gray-500 text-sm mt-1">Páginas exibidas após a ligação ou durante um evento de upsell</p>
         </div>
         <Link to="/upsell/new"
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-green-900/20">
+          className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-[#FE015C]/20">
           <Plus size={16} />Nova upsell
         </Link>
       </div>
@@ -82,7 +82,7 @@ export default function UpsellsPage() {
           <p className="text-white font-semibold text-lg mb-1">Nenhuma upsell criada</p>
           <p className="text-gray-500 text-sm mb-5 max-w-xs">Crie uma página de upsell para exibir depois da ligação e aumentar o ticket médio</p>
           <Link to="/upsell/new"
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all">
+            className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all">
             <Plus size={16} />Criar upsell
           </Link>
         </div>

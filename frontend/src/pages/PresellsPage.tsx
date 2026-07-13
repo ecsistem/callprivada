@@ -70,7 +70,7 @@ export default function PresellsPage() {
           </p>
         </div>
         <Link to="/presell/new"
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-green-900/30">
+          className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-[#FE015C]/20">
           <Plus size={16} />
           Nova presell
         </Link>
@@ -101,7 +101,7 @@ export default function PresellsPage() {
             Crie sua primeira página de presell e use o link dela no anúncio — seu funil fica protegido e os leads chegam mais quentes.
           </p>
           <Link to="/presell/new"
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold px-5 py-3 rounded-xl transition-all shadow-lg shadow-green-900/30">
+            className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white text-sm font-semibold px-5 py-3 rounded-xl transition-all shadow-lg shadow-[#FE015C]/20">
             <Plus size={16} />
             Criar primeira presell
           </Link>

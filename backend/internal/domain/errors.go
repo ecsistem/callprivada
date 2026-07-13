@@ -19,4 +19,5 @@ var (
 	ErrPlanLimitReached         = errors.New("plan limit reached")
 	ErrPendingApproval          = errors.New("account pending admin approval")
 	ErrUnsupportedPaymentMethod = errors.New("unsupported payment method")
+	ErrPlanInUse                = errors.New("plan has subscriptions and cannot be deleted")
 )

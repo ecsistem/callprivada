@@ -232,7 +232,7 @@ export default function FunnelsPage() {
           <p className="text-gray-500 text-sm mt-1">Mapa completo: presell → call → upsell → downsell</p>
         </div>
         <Link to="/calls/new"
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-green-900/20">
+          className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-[#FE015C]/20">
           <Plus size={16} />Novo funil
         </Link>
       </div>
@@ -266,7 +266,7 @@ export default function FunnelsPage() {
           <p className="text-white font-semibold text-lg mb-1">Nenhum funil ainda</p>
           <p className="text-gray-500 text-sm mb-5 max-w-xs">Crie uma chamada e conecte presell, upsell e downsell para montar seu funil completo</p>
           <Link to="/calls/new"
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all">
+            className="flex items-center gap-2 bg-[#FE015C] hover:bg-[#FD267D] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all">
             <Plus size={16} />Criar chamada
           </Link>
         </div>

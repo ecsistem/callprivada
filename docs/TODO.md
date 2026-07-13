@@ -343,3 +343,12 @@ Regras:
 - [x] `CallPublicPage` — vídeo com `preload="auto"`, `poster` (foto do contato) e `onLoadedData` para tirar o overlay de loading mais cedo.
 - [x] Clarity: campo `clarity_project_id` no rastreamento (migration 000036, domain/model/handler/repo, serializado nas páginas públicas de call e presell, injetado por `useTrackingScripts`, campo no `TrackingSettingsPage`).
 - [x] Endpoint de reotimização de vídeos existentes: `POST /videos/:id/reoptimize` e `POST /videos/reoptimize-all` (autenticados). Baixa do storage, roda `optimizeVideo`, regrava no mesmo key só se ficar menor. Botão ⚡ na página de Vídeos. Adicionado `Download` à interface de storage (S3 + local).
+
+## Usabilidade — consistência visual (2026-07-13)
+- [x] NewCallPage migrada 100% para o design system rosa (#FE015C) — verde restava só no preview do WhatsApp (hex, mantido).
+- [x] Botões primários e anéis de foco convertidos de verde → rosa em CallsPage, FunnelsPage, PresellsPage, EditCallPage, SubscriptionPage, UpsellsPage, VideoEditorPage. Verde semântico (status Pronto/Ativo/Pago) e verde do WhatsApp preservados.
+
+## Fix: excluir plano com assinantes (2026-07-13)
+- [x] Causa: FK `subscriptions.plan_id` sem ON DELETE → hard-delete de plano com assinaturas dava 500 genérico (frontend não mostrava erro).
+- [x] Backend: `SubscriptionRepository.CountByPlan`; `DeletePlan` bloqueia com `ErrPlanInUse` (409 "desative em vez de excluir") quando há assinaturas; hard-delete só quando 0 assinantes.
+- [x] Frontend (PlansTab): mostra a mensagem de erro inline + botão "Desativar plano em vez disso" (usa updatePlan active=false).
