@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  createPresell, updatePresell, getPresell, uploadPresellImage, listDownsells, listUpsells,
+  createPresell, updatePresell, getPresell, uploadPresellImage, listDownsells,
   TEMPLATES, DOWNSELL_TEMPLATES, UPSELL_TEMPLATES, getTemplateDefaults,
   type PresellConfig, type UpsertPresellPayload, type PresellPage,
 } from '../services/presellService';
@@ -135,13 +135,6 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
     enabled: !isDownsell && !isUpsell,
   });
   const downsells: PresellPage[] = downsellsData?.data ?? [];
-
-  const { data: upsellsData } = useQuery({
-    queryKey: ['upsells', 1],
-    queryFn: () => listUpsells(1),
-    enabled: !isUpsell,
-  });
-  const upsells: PresellPage[] = upsellsData?.data ?? [];
 
   useEffect(() => {
     if (existing) {
@@ -958,26 +951,6 @@ export default function PresellEditorPage({ pageType = 'presell' }: PresellEdito
                       </select>
                     )}
                     <p className="text-xs text-gray-600">Modal aparece quando o visitante tentar sair (mouse no topo / trocar aba)</p>
-                  </div>
-                )}
-
-                {!isUpsell && upsells.length > 0 && (
-                  <div className="space-y-1.5 pt-2 border-t border-white/5">
-                    <label className="text-xs font-medium text-gray-400">Página Upsell pós-call</label>
-                    <select
-                      value={upsells.find(u => config.redirect_url === `/u/${u.slug}`)?.id ?? ''}
-                      onChange={e => {
-                        const page = upsells.find(u => u.id === e.target.value);
-                        setField('redirect_url', page ? `/u/${page.slug}` : '');
-                      }}
-                      className={inputCls}
-                    >
-                      <option value="">— Nenhuma —</option>
-                      {upsells.map(u => (
-                        <option key={u.id} value={u.id}>{u.config?.headline ?? u.slug}</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-600">Página exibida após a call para fazer upsell</p>
                   </div>
                 )}
               </div>
