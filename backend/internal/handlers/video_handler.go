@@ -150,6 +150,46 @@ func (h *VideoHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// Reoptimize reprocessa (comprime + faststart) um vídeo já enviado.
+func (h *VideoHandler) Reoptimize(c *gin.Context) {
+	userID, ok := c.Get(middlewares.ContextUserIDKey)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "missing user context"}})
+		return
+	}
+	uid := userID.(uuid.UUID)
+
+	videoID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": "bad_request", "message": "id inválido"}})
+		return
+	}
+
+	res, err := h.videos.Reoptimize(c.Request.Context(), uid, videoID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": res})
+}
+
+// ReoptimizeAll reprocessa todos os vídeos do usuário autenticado.
+func (h *VideoHandler) ReoptimizeAll(c *gin.Context) {
+	userID, ok := c.Get(middlewares.ContextUserIDKey)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "missing user context"}})
+		return
+	}
+	uid := userID.(uuid.UUID)
+
+	results, err := h.videos.ReoptimizeAll(c.Request.Context(), uid)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": results})
+}
+
 // DTO de saída — nunca expõe storage_key diretamente.
 type videoDTO struct {
 	ID           string   `json:"id"`

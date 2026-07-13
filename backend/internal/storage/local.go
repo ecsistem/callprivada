@@ -48,6 +48,12 @@ func (l *LocalStorage) Upload(_ context.Context, key string, body io.Reader, _ s
 	return nil
 }
 
+// Download abre o arquivo local. O chamador deve fechar.
+func (l *LocalStorage) Download(_ context.Context, key string) (io.ReadCloser, error) {
+	dest := filepath.Join(l.basePath, filepath.FromSlash(key))
+	return os.Open(dest)
+}
+
 // Delete remove o arquivo do disco. Ignora se não existir.
 func (l *LocalStorage) Delete(_ context.Context, key string) error {
 	dest := filepath.Join(l.basePath, filepath.FromSlash(key))

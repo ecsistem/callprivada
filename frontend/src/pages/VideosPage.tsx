@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { uploadVideo, listVideos, deleteVideo, type Video } from '../services/videoService';
+import { uploadVideo, listVideos, deleteVideo, reoptimizeVideo, type Video } from '../services/videoService';
 import { VideoDropzone } from '../components/ui/VideoDropzone';
 import { VideoThumbnail } from '../components/ui/VideoThumbnail';
-import { Film, Trash2, Check, AlertCircle, Clock } from 'lucide-react';
+import { Film, Trash2, Check, AlertCircle, Clock, Zap } from 'lucide-react';
 
 const MAX_BYTES = 2 * 1024 * 1024 * 1024;
 
@@ -73,6 +73,27 @@ export default function VideosPage() {
       qc.invalidateQueries({ queryKey: ['videos'] });
     },
     onSettled: () => setDeletingId(null),
+  });
+
+  const [optimizeMsg, setOptimizeMsg] = useState<{ id: string; text: string; ok: boolean } | null>(null);
+  const reoptimizeMutation = useMutation({
+    mutationFn: reoptimizeVideo,
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['videos'] });
+      if (res.optimized) {
+        const pct = res.old_size_bytes > 0
+          ? Math.round((1 - res.new_size_bytes / res.old_size_bytes) * 100)
+          : 0;
+        setOptimizeMsg({ id: res.video_id, ok: true, text: `Otimizado: ${formatBytes(res.old_size_bytes)} → ${formatBytes(res.new_size_bytes)} (−${pct}%)` });
+      } else {
+        setOptimizeMsg({ id: res.video_id, ok: false, text: res.reason || 'Nada a otimizar.' });
+      }
+    },
+    onError: (err: unknown, id) => {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })
+        ?.response?.data?.error?.message;
+      setOptimizeMsg({ id, ok: false, text: msg ?? 'Erro ao otimizar.' });
+    },
   });
 
   function handleFileSelect(file: File) {
@@ -154,8 +175,27 @@ export default function VideosPage() {
                     </span>
                   )}
                 </div>
+                {optimizeMsg?.id === v.id && (
+                  <p className={`text-xs mt-1 ${optimizeMsg.ok ? 'text-green-400' : 'text-gray-500'}`}>
+                    {optimizeMsg.text}
+                  </p>
+                )}
               </div>
               <StatusBadge status={v.status} />
+              {v.status === 'ready' && (
+                <button
+                  onClick={() => { setOptimizeMsg(null); reoptimizeMutation.mutate(v.id); }}
+                  disabled={reoptimizeMutation.isPending}
+                  title="Comprimir para carregar rápido no celular"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-600 hover:text-[#FE015C] hover:bg-[#FE015C]/10 transition-all disabled:opacity-50"
+                >
+                  {reoptimizeMutation.isPending && reoptimizeMutation.variables === v.id ? (
+                    <span className="w-3.5 h-3.5 border-2 border-[#FE015C]/40 border-t-[#FE015C] rounded-full animate-spin" />
+                  ) : (
+                    <Zap size={15} />
+                  )}
+                </button>
+              )}
               {deletingId === v.id ? (
                 <div className="flex items-center gap-1.5">
                   <button onClick={() => deleteMutation.mutate(v.id)} disabled={deleteMutation.isPending}

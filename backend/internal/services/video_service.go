@@ -147,6 +147,110 @@ func sniffFileMIME(path string) (string, error) {
 	return http.DetectContentType(buf[:n]), nil
 }
 
+// ReoptimizeResult descreve o resultado de reprocessar um vídeo existente.
+type ReoptimizeResult struct {
+	VideoID       uuid.UUID `json:"video_id"`
+	Optimized     bool      `json:"optimized"`
+	OldSizeBytes  int64     `json:"old_size_bytes"`
+	NewSizeBytes  int64     `json:"new_size_bytes"`
+	Reason        string    `json:"reason,omitempty"`
+}
+
+// Reoptimize baixa um vídeo já armazenado, roda a otimização (compressão +
+// faststart) e regrava no mesmo storage key. Só substitui se o resultado for
+// menor que o original. Usado para reprocessar vídeos enviados antes da
+// otimização automática no upload.
+func (s *VideoService) Reoptimize(ctx context.Context, userID, videoID uuid.UUID) (*ReoptimizeResult, error) {
+	v, err := s.GetByID(ctx, userID, videoID)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &ReoptimizeResult{VideoID: v.ID, OldSizeBytes: v.SizeBytes, NewSizeBytes: v.SizeBytes}
+
+	if !hasFFmpeg() {
+		res.Reason = "ffmpeg indisponível no servidor"
+		return res, nil
+	}
+	if v.MimeType != "video/mp4" {
+		res.Reason = "otimização suportada apenas para video/mp4"
+		return res, nil
+	}
+
+	// Baixa o objeto para um arquivo temporário.
+	rc, err := s.storage.Download(ctx, v.StorageKey)
+	if err != nil {
+		return nil, fmt.Errorf("download failed: %w", err)
+	}
+	defer rc.Close()
+
+	src, err := os.CreateTemp("", "fwlc-reopt-src-*.mp4")
+	if err != nil {
+		return nil, fmt.Errorf("cannot create temp: %w", err)
+	}
+	srcPath := src.Name()
+	defer os.Remove(srcPath)
+	if _, err := io.Copy(src, rc); err != nil {
+		_ = src.Close()
+		return nil, fmt.Errorf("cannot buffer download: %w", err)
+	}
+	_ = src.Close()
+
+	optPath, ok := optimizeVideo(srcPath)
+	if !ok {
+		res.Reason = "vídeo já otimizado ou otimização não aplicável"
+		return res, nil
+	}
+	defer os.Remove(optPath)
+
+	info, err := os.Stat(optPath)
+	if err != nil {
+		return nil, err
+	}
+	// Só substitui se ficou menor (evita regravar sem ganho / com perda).
+	if info.Size() >= v.SizeBytes {
+		res.Reason = "resultado não ficou menor; original mantido"
+		return res, nil
+	}
+
+	f, err := os.Open(optPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	if err := s.storage.Upload(ctx, v.StorageKey, f, "video/mp4"); err != nil {
+		return nil, fmt.Errorf("storage upload failed: %w", err)
+	}
+
+	v.SizeBytes = info.Size()
+	if err := s.videos.Update(ctx, v); err != nil {
+		return nil, err
+	}
+
+	res.Optimized = true
+	res.NewSizeBytes = info.Size()
+	return res, nil
+}
+
+// ReoptimizeAll reprocessa todos os vídeos de um usuário e retorna os resultados.
+func (s *VideoService) ReoptimizeAll(ctx context.Context, userID uuid.UUID) ([]ReoptimizeResult, error) {
+	vids, err := s.videos.FindByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]ReoptimizeResult, 0, len(vids))
+	for i := range vids {
+		r, err := s.Reoptimize(ctx, userID, vids[i].ID)
+		if err != nil {
+			results = append(results, ReoptimizeResult{VideoID: vids[i].ID, Reason: err.Error()})
+			continue
+		}
+		results = append(results, *r)
+	}
+	return results, nil
+}
+
 func (s *VideoService) List(ctx context.Context, userID uuid.UUID) ([]domain.Video, error) {
 	return s.videos.FindByUserID(ctx, userID)
 }

@@ -244,6 +244,8 @@ func main() {
 	videos.GET("", videoHandler.List)
 	videos.GET("/:id", videoHandler.Get)
 	videos.GET("/:id/url", videoHandler.PresignURL)
+	videos.POST("/:id/reoptimize", videoHandler.Reoptimize)
+	videos.POST("/reoptimize-all", videoHandler.ReoptimizeAll)
 	videos.DELETE("/:id", videoHandler.Delete)
 
 	// Presell (autenticado, requer assinatura).

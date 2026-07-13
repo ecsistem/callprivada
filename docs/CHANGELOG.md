@@ -3,6 +3,17 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-13b] — Endpoint para reotimizar vídeos já enviados
+
+### Backend
+- `storage`: novo método `Download(ctx, key) (io.ReadCloser, error)` na interface `FileStorage`, implementado em S3 (`GetObject`) e local (`os.Open`).
+- `services/video_service.go`: `Reoptimize(userID, videoID)` — baixa o vídeo do storage, roda `optimizeVideo` (compressão + faststart) e regrava no mesmo storage key **apenas se o resultado ficar menor**; atualiza `size_bytes`. `ReoptimizeAll(userID)` percorre todos os vídeos do usuário.
+- `handlers/video_handler.go` + rotas: `POST /videos/:id/reoptimize` e `POST /videos/reoptimize-all` (autenticados, com subscription).
+
+### Frontend
+- `services/videoService.ts`: `reoptimizeVideo(id)` e `reoptimizeAllVideos()` (timeout estendido — o encode roda no servidor).
+- `pages/VideosPage.tsx`: botão ⚡ por vídeo que dispara a reotimização e mostra o ganho (ex: "138 MB → 32 MB (−77%)").
+
 ## [2026-07-13] — Performance mobile/Safari + Microsoft Clarity
 
 ### Backend

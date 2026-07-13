@@ -342,3 +342,4 @@ Regras:
 - [x] Safari CSS: `-webkit-backdrop-filter` no `.glass-input-wrap`; utilitário `.min-h-screen-safe` (100dvh) aplicado na PresellPublicPage (evita corte pela barra de endereço no iOS).
 - [x] `CallPublicPage` — vídeo com `preload="auto"`, `poster` (foto do contato) e `onLoadedData` para tirar o overlay de loading mais cedo.
 - [x] Clarity: campo `clarity_project_id` no rastreamento (migration 000036, domain/model/handler/repo, serializado nas páginas públicas de call e presell, injetado por `useTrackingScripts`, campo no `TrackingSettingsPage`).
+- [x] Endpoint de reotimização de vídeos existentes: `POST /videos/:id/reoptimize` e `POST /videos/reoptimize-all` (autenticados). Baixa do storage, roda `optimizeVideo`, regrava no mesmo key só se ficar menor. Botão ⚡ na página de Vídeos. Adicionado `Download` à interface de storage (S3 + local).

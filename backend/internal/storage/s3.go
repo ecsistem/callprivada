@@ -101,6 +101,18 @@ func (s *S3Client) Upload(ctx context.Context, key string, body io.Reader, conte
 	return err
 }
 
+// Download retorna o corpo de um objeto do bucket. O chamador deve fechar.
+func (s *S3Client) Download(ctx context.Context, key string) (io.ReadCloser, error) {
+	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out.Body, nil
+}
+
 // Delete remove um objeto do bucket.
 func (s *S3Client) Delete(ctx context.Context, key string) error {
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
