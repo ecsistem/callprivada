@@ -3,6 +3,21 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-13] — Performance mobile/Safari + Microsoft Clarity
+
+### Backend
+- `services/video_optimize.go` (novo) + `video_service.go` — upload agora otimiza o vídeo: `ffprobe` mede resolução/fps/bitrate e, se for grande (>800px, >30fps ou >2.5 Mbps), recodifica para H.264 ~720p/30fps CRF 26 (preset veryfast) + AAC 128k + `+faststart`; senão faz só o remux faststart. Redução medida no vídeo de produção: 138 MB/6 Mbps → ~32 MB/1.5 Mbps. Fallback seguro para o original se o ffmpeg falhar.
+- `Dockerfile` — instala `ffmpeg` (traz `ffprobe`).
+- `handlers/file_handler.go` — Content-Type por magic bytes (uploads locais sem extensão eram servidos como `application/octet-stream`, que o iOS Safari não faz streaming progressivo); `Cache-Control: immutable` + `Accept-Ranges: bytes`.
+- Tracking: coluna `clarity_project_id` (migration 000036) em domain/model/repo/handler; incluída também nos mapas de tracking das páginas públicas (`call_handler`, `presell_handler`), junto com `dracofy_token` que estava faltando.
+
+### Frontend
+- `App.tsx` — code-splitting por rota com `React.lazy` + `Suspense`. O bundle único de 809 KB foi quebrado por página; um lead em `/c/:slug` baixa ~118 KB gzip (framework + página da chamada), sem o editor de vídeo/admin.
+- `styles/index.css` — `-webkit-backdrop-filter` no `.glass-input-wrap`; utilitário `.min-h-screen-safe` (`100dvh`).
+- `pages/PresellPublicPage.tsx` — usa `.min-h-screen-safe` (evita corte pela barra de endereço no iOS Safari).
+- `pages/CallPublicPage.tsx` — `<video>` com `preload="auto"`, `poster` (foto do contato) e `onLoadedData`.
+- Clarity: `clarity_project_id` no tipo/serviço, injeção do script em `useTrackingScripts` e campo no `TrackingSettingsPage`.
+
 ## [2026-07-12m] — Pixels: InitiateCheckout e Purchase nos pontos corretos
 
 ### Frontend

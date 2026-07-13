@@ -80,10 +80,11 @@ func (s *VideoService) Upload(ctx context.Context, userID uuid.UUID, filename st
 		return nil, domain.ErrUnsupportedMIME
 	}
 
-	// Otimização: remux MP4 com moov atom no início (streaming instantâneo).
+	// Otimização: comprime vídeos grandes (~720p/30fps) e/ou move o moov atom
+	// para o início (faststart) — streaming fluido e rápido no celular.
 	uploadPath := tmpPath
 	if mimeType == "video/mp4" {
-		if optPath, ok := faststartRemux(tmpPath); ok {
+		if optPath, ok := optimizeVideo(tmpPath); ok {
 			defer os.Remove(optPath)
 			uploadPath = optPath
 		}

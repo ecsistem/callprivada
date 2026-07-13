@@ -334,3 +334,11 @@ Regras:
 - [x] Fix: `age_gate` faltava no mapa `validEventTypes` do `call_event_service.go` — criação do evento "Verificação de idade" era rejeitada ("tipo de evento inválido"). Pendente: rebuild do container backend (tracking fix + este).
 - [x] Fix presell: horários (botões) deletados reapareciam ao reabrir o editor — o load só aplicava `slot_labels` salvos quando a lista não era vazia (`PresellEditorPage.tsx`).
 - [x] Pixels: `InitiateCheckout` disparado ao chegar na tela de pagamento e `Purchase` ao confirmar o pagamento (Meta/TikTok/GA4/GTM) — `useTrackingScripts.ts` (`trackPixelEvent`), `EventOverlay.tsx`, `CreditsOverlay.tsx`.
+
+## Performance vídeo/mobile + Safari (2026-07-12)
+- [x] Vídeo: otimização no upload — `optimizeVideo` recodifica vídeos grandes para H.264 ~720p/30fps (CRF 26 veryfast) + faststart; senão só remux faststart. Validado: 138 MB/6 Mbps → ~32 MB/1.5 Mbps. Requer ffmpeg (adicionado ao `backend/Dockerfile`).
+- [x] `file_handler.go` — Content-Type detectado por magic bytes (uploads locais sem extensão eram `octet-stream`, que o iOS não faz streaming); cache imutável + Accept-Ranges.
+- [x] Code-splitting por rota (`App.tsx` com React.lazy + Suspense) — lead em `/c/:slug` baixa ~118 KB gzip em vez de ~250 KB (bundle único de 809 KB eliminado; editor/admin fora do bundle público).
+- [x] Safari CSS: `-webkit-backdrop-filter` no `.glass-input-wrap`; utilitário `.min-h-screen-safe` (100dvh) aplicado na PresellPublicPage (evita corte pela barra de endereço no iOS).
+- [x] `CallPublicPage` — vídeo com `preload="auto"`, `poster` (foto do contato) e `onLoadedData` para tirar o overlay de loading mais cedo.
+- [x] Clarity: campo `clarity_project_id` no rastreamento (migration 000036, domain/model/handler/repo, serializado nas páginas públicas de call e presell, injetado por `useTrackingScripts`, campo no `TrackingSettingsPage`).
