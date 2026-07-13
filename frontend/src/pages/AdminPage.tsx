@@ -5,6 +5,7 @@ import {
   listAuditLogs, blockUser, unblockUser, deleteAdminUser,
   cancelAdminSubscription, deleteAdminCall, deleteAdminPlan,
   impersonateUser, changeUserPassword,
+  getAppSettings, updateAppSettings,
 } from '../services/adminService';
 import { useAuthStore } from '../stores/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -13,11 +14,11 @@ import api from '../services/api';
 import {
   Users, CreditCard, Phone, Eye, ScrollText, ChevronLeft, ChevronRight,
   Search, Shield, AlertCircle, InboxIcon, Settings, Plus, X, Check,
-  LogIn, Key, Trash2,
+  LogIn, Key, Trash2, Server,
 } from 'lucide-react';
 import { formatPrice } from '../lib/currency';
 
-type Tab = 'stats' | 'users' | 'subscriptions' | 'calls' | 'logs' | 'plans';
+type Tab = 'stats' | 'users' | 'subscriptions' | 'calls' | 'logs' | 'plans' | 'settings';
 
 const inputCls = "bg-[#1c0510] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/60 focus:ring-1 focus:ring-[#FE015C]/20 transition-all";
 
@@ -614,6 +615,80 @@ function AuditLogsTab() {
   );
 }
 
+function SettingsTab() {
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ['admin-settings'], queryFn: getAppSettings });
+
+  const [cdn, setCdn] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const value = cdn ?? data?.video_cdn_url ?? '';
+
+  const mutation = useMutation({
+    mutationFn: (video_cdn_url: string) => updateAppSettings({ video_cdn_url }),
+    onSuccess: (res) => {
+      qc.setQueryData(['admin-settings'], res);
+      setCdn(null);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    },
+  });
+
+  if (isLoading) return <div className="h-40 bg-white/5 rounded-xl animate-pulse" />;
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-xl bg-[#FE015C]/10 flex items-center justify-center shrink-0">
+          <Server size={17} className="text-[#FE015C]" />
+        </div>
+        <div>
+          <p className="text-white font-semibold text-sm">CDN de vídeo</p>
+          <p className="text-gray-500 text-xs mt-0.5 leading-relaxed">
+            Domínio da CDN que serve os vídeos das chamadas. As URLs dos vídeos passam a usar
+            este domínio (mantendo o caminho). Deixe vazio para usar o storage padrão.
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-gray-400">Domínio da CDN</label>
+        <input
+          value={value}
+          onChange={(e) => { setCdn(e.target.value); setSaved(false); }}
+          placeholder={data?.video_cdn_default || 'https://cdn.seudominio.com'}
+          className={inputCls + ' w-full font-mono'}
+        />
+        <p className="text-xs text-gray-600">
+          {value.trim()
+            ? <>Vídeos servirão de <span className="text-gray-400 font-mono">{value.trim().replace(/\/+$/, '')}/…</span></>
+            : <>Padrão atual: <span className="text-gray-400 font-mono">{data?.video_cdn_default || '—'}/…</span></>}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => mutation.mutate(value.trim())}
+          disabled={mutation.isPending || cdn === null}
+          className="bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all"
+        >
+          {mutation.isPending ? 'Salvando…' : 'Salvar'}
+        </button>
+        {value.trim() && (
+          <button
+            onClick={() => { setCdn(''); mutation.mutate(''); }}
+            disabled={mutation.isPending}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Limpar (usar padrão)
+          </button>
+        )}
+        {saved && <span className="text-xs text-green-400 flex items-center gap-1"><Check size={13} />Salvo</span>}
+        {mutation.isError && <span className="text-xs text-red-400 flex items-center gap-1"><AlertCircle size={13} />Domínio inválido</span>}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('stats');
 
@@ -630,6 +705,7 @@ export default function AdminPage() {
     { key: 'calls', label: 'Chamadas', icon: <Phone size={14} /> },
     { key: 'logs', label: 'Audit Log', icon: <ScrollText size={14} /> },
     { key: 'plans', label: 'Planos', icon: <Settings size={14} /> },
+    { key: 'settings', label: 'Configurações', icon: <Server size={14} /> },
   ];
 
   return (
@@ -670,6 +746,7 @@ export default function AdminPage() {
         {tab === 'calls' && <CallsTab />}
         {tab === 'logs' && <AuditLogsTab />}
         {tab === 'plans' && <PlansTab />}
+        {tab === 'settings' && <SettingsTab />}
       </div>
     </div>
   );

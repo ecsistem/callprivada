@@ -67,6 +67,7 @@ func main() {
 	videoRepo := repositories.NewVideoRepository(db)
 	callRepo := repositories.NewCallRepository(db)
 	callEventRepo := repositories.NewCallEventRepository(db)
+	settingsRepo := repositories.NewSettingsRepository(db)
 	paymentConfigRepo := repositories.NewPaymentConfigRepository(db)
 	billingTxnRepo := repositories.NewBillingTransactionRepository(db)
 	visitRepo := repositories.NewVisitRepository(db)
@@ -113,8 +114,9 @@ func main() {
 
 	abacateClient := abacatepay.NewClient(cfg.AbacatePayAPIKey, cfg.AbacatePayBaseURL)
 	subService := services.NewSubscriptionService(planRepo, subRepo, userRepo, abacateClient)
+	settingsService := services.NewSettingsService(settingsRepo)
 	videoService := services.NewVideoService(videoRepo, fileStore)
-	callService := services.NewCallService(callRepo, videoRepo, callEventRepo, fileStore, paymentConfigRepo)
+	callService := services.NewCallService(callRepo, videoRepo, callEventRepo, fileStore, paymentConfigRepo, settingsService)
 	callEventService := services.NewCallEventService(callEventRepo, callRepo)
 	visitService := services.NewVisitService(visitRepo, callRepo)
 	dashboardService := services.NewDashboardService(callRepo, subRepo, planRepo, visitRepo)
@@ -144,6 +146,7 @@ func main() {
 	adminHandler := handlers.NewAdminHandler(adminService, jwtService)
 	presellHandler := handlers.NewPresellHandler(presellService, trackingService, subService)
 	trackingHandler := handlers.NewTrackingHandler(trackingService)
+	settingsHandler := handlers.NewSettingsHandler(settingsService, fileStore)
 
 	r := gin.Default()
 	r.Use(middlewares.SecurityHeaders())
@@ -291,6 +294,8 @@ func main() {
 	adminGroup.POST("/plans", subHandler.CreatePlan)
 	adminGroup.PUT("/plans/:id", subHandler.UpdatePlan)
 	adminGroup.PUT("/plans/:id/limits", subHandler.UpdatePlanLimits)
+	adminGroup.GET("/settings", settingsHandler.Get)
+	adminGroup.PUT("/settings", settingsHandler.Update)
 	adminGroup.DELETE("/plans/:id", subHandler.DeletePlan)
 
 	// Webhooks (sem JWT).

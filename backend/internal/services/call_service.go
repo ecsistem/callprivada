@@ -60,15 +60,16 @@ type UpdateCallInput struct {
 }
 
 type CallService struct {
-	calls   domain.CallRepository
-	videos  domain.VideoRepository
-	events  domain.CallEventRepository
-	storage storage.FileStorage
-	configs domain.PaymentConfigRepository
+	calls    domain.CallRepository
+	videos   domain.VideoRepository
+	events   domain.CallEventRepository
+	storage  storage.FileStorage
+	configs  domain.PaymentConfigRepository
+	settings *SettingsService
 }
 
-func NewCallService(calls domain.CallRepository, videos domain.VideoRepository, events domain.CallEventRepository, store storage.FileStorage, configs domain.PaymentConfigRepository) *CallService {
-	return &CallService{calls: calls, videos: videos, events: events, storage: store, configs: configs}
+func NewCallService(calls domain.CallRepository, videos domain.VideoRepository, events domain.CallEventRepository, store storage.FileStorage, configs domain.PaymentConfigRepository, settings *SettingsService) *CallService {
+	return &CallService{calls: calls, videos: videos, events: events, storage: store, configs: configs, settings: settings}
 }
 
 func (s *CallService) Create(ctx context.Context, userID uuid.UUID, in CreateCallInput) (*domain.Call, error) {
@@ -243,6 +244,10 @@ func (s *CallService) GetPublic(ctx context.Context, slug string) (*PublicCallDa
 	}
 
 	videoURL := s.storage.PublicURL(storageKey)
+	// Se o admin configurou uma CDN de vídeo, reescreve o host da URL pública.
+	if s.settings != nil {
+		videoURL = s.settings.ApplyVideoCDN(ctx, videoURL)
+	}
 
 	events, err := s.events.FindByCallID(ctx, call.ID)
 	if err != nil {

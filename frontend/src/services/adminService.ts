@@ -107,3 +107,18 @@ export async function impersonateUser(id: string): Promise<{ access_token: strin
 export async function changeUserPassword(id: string, password: string): Promise<void> {
   await api.put(`/admin/users/${id}/password`, { password });
 }
+
+export interface AppSettings {
+  video_cdn_url: string;
+  video_cdn_default: string;
+}
+
+export async function getAppSettings(): Promise<AppSettings> {
+  const res = await api.get('/admin/settings');
+  return res.data.data;
+}
+
+export async function updateAppSettings(patch: { video_cdn_url?: string }): Promise<AppSettings> {
+  const res = await api.put('/admin/settings', patch);
+  return res.data.data;
+}
