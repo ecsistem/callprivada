@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"github.com/google/uuid"
 
@@ -44,36 +45,63 @@ func (s *VideoService) CheckCreateLimit(ctx context.Context, userID uuid.UUID, s
 	return nil
 }
 
-// Upload valida MIME real (magic bytes), faz upload para S3/MinIO e cria o registro.
+// Upload valida MIME real (magic bytes), otimiza o vídeo para streaming
+// (faststart), envia para o storage e cria o registro.
 // O body deve ser o io.Reader do multipart file.
 func (s *VideoService) Upload(ctx context.Context, userID uuid.UUID, filename string, size int64, body io.Reader) (*domain.Video, error) {
 	if size > domain.VideoMaxBytes {
 		return nil, domain.ErrFileTooLarge
 	}
 
-	// Lê os primeiros 512 bytes para detecção real de MIME (magic bytes).
-	sniff := make([]byte, 512)
-	n, err := io.ReadFull(body, sniff)
-	if err != nil && err != io.ErrUnexpectedEOF {
+	// Grava o upload em um arquivo temporário para (1) detectar o MIME real e
+	// (2) permitir a otimização com ffmpeg, que precisa de acesso ao arquivo.
+	tmp, err := os.CreateTemp("", "fwlc-upload-*")
+	if err != nil {
+		return nil, fmt.Errorf("cannot create temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	written, err := io.Copy(tmp, io.LimitReader(body, domain.VideoMaxBytes+1))
+	_ = tmp.Close()
+	if err != nil {
+		return nil, fmt.Errorf("cannot buffer upload: %w", err)
+	}
+	if written > domain.VideoMaxBytes {
+		return nil, domain.ErrFileTooLarge
+	}
+
+	// Detecção real de MIME pelos magic bytes (primeiros 512 bytes).
+	mimeType, err := sniffFileMIME(tmpPath)
+	if err != nil {
 		return nil, fmt.Errorf("cannot read file: %w", err)
 	}
-	mime := http.DetectContentType(sniff[:n])
-
-	if !domain.AllowedVideoMIMEs[mime] {
+	if !domain.AllowedVideoMIMEs[mimeType] {
 		return nil, domain.ErrUnsupportedMIME
 	}
 
-	key := fmt.Sprintf("videos/%s/%s", userID, uuid.New().String())
+	// Otimização: remux MP4 com moov atom no início (streaming instantâneo).
+	uploadPath := tmpPath
+	if mimeType == "video/mp4" {
+		if optPath, ok := faststartRemux(tmpPath); ok {
+			defer os.Remove(optPath)
+			uploadPath = optPath
+		}
+	}
 
-	// Recombina os bytes já lidos com o restante do body.
-	combined := io.MultiReader(newBytesReader(sniff[:n]), body)
+	uploadSize := written
+	if info, statErr := os.Stat(uploadPath); statErr == nil {
+		uploadSize = info.Size()
+	}
+
+	key := fmt.Sprintf("videos/%s/%s", userID, uuid.New().String())
 
 	video := &domain.Video{
 		UserID:       userID,
 		StorageKey:   key,
 		OriginalName: filename,
-		MimeType:     mime,
-		SizeBytes:    size,
+		MimeType:     mimeType,
+		SizeBytes:    uploadSize,
 		Status:       domain.VideoStatusUploading,
 	}
 
@@ -81,7 +109,15 @@ func (s *VideoService) Upload(ctx context.Context, userID uuid.UUID, filename st
 		return nil, err
 	}
 
-	if err := s.storage.Upload(ctx, key, combined, mime); err != nil {
+	f, err := os.Open(uploadPath)
+	if err != nil {
+		video.Status = domain.VideoStatusFailed
+		_ = s.videos.Update(ctx, video)
+		return nil, fmt.Errorf("cannot reopen file for upload: %w", err)
+	}
+	defer f.Close()
+
+	if err := s.storage.Upload(ctx, key, f, mimeType); err != nil {
 		video.Status = domain.VideoStatusFailed
 		_ = s.videos.Update(ctx, video)
 		return nil, fmt.Errorf("storage upload failed: %w", err)
@@ -93,6 +129,21 @@ func (s *VideoService) Upload(ctx context.Context, userID uuid.UUID, filename st
 	}
 
 	return video, nil
+}
+
+// sniffFileMIME lê os primeiros 512 bytes de um arquivo e retorna o MIME real.
+func sniffFileMIME(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	buf := make([]byte, 512)
+	n, err := f.Read(buf)
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	return http.DetectContentType(buf[:n]), nil
 }
 
 func (s *VideoService) List(ctx context.Context, userID uuid.UUID) ([]domain.Video, error) {

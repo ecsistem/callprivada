@@ -7,6 +7,7 @@ export interface TrackingConfig {
   gtm_container_id: string;
   utmify_token: string;
   dracofy_token: string;
+  clarity_project_id: string;
   custom_head_script: string;
 }
 

@@ -359,6 +359,8 @@ func (h *CallHandler) GetPublic(c *gin.Context) {
 			"google_analytics_id": tracking.GoogleAnalyticsID,
 			"gtm_container_id":    tracking.GTMContainerID,
 			"utmify_token":        tracking.UTMifyToken,
+			"dracofy_token":       tracking.DracofyToken,
+			"clarity_project_id":  tracking.ClarityProjectID,
 			"custom_head_script":  tracking.CustomHeadScript,
 		}
 	}

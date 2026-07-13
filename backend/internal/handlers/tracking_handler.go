@@ -27,6 +27,7 @@ func trackingToMap(cfg *domain.UserTrackingConfig) gin.H {
 		"gtm_container_id":    cfg.GTMContainerID,
 		"utmify_token":        cfg.UTMifyToken,
 		"dracofy_token":       cfg.DracofyToken,
+		"clarity_project_id":  cfg.ClarityProjectID,
 		"custom_head_script":  cfg.CustomHeadScript,
 	}
 }
@@ -48,6 +49,7 @@ type saveTrackingRequest struct {
 	GTMContainerID    string `json:"gtm_container_id"`
 	UTMifyToken       string `json:"utmify_token"`
 	DracofyToken      string `json:"dracofy_token"`
+	ClarityProjectID  string `json:"clarity_project_id"`
 	CustomHeadScript  string `json:"custom_head_script"`
 }
 
@@ -66,6 +68,7 @@ func (h *TrackingHandler) Save(c *gin.Context) {
 		GTMContainerID:    req.GTMContainerID,
 		UTMifyToken:       req.UTMifyToken,
 		DracofyToken:      req.DracofyToken,
+		ClarityProjectID:  req.ClarityProjectID,
 		CustomHeadScript:  req.CustomHeadScript,
 	}
 	saved, err := h.svc.Save(c.Request.Context(), userID, cfg)

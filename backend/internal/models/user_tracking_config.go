@@ -19,6 +19,7 @@ type UserTrackingConfig struct {
 	GTMContainerID    string    `gorm:"not null;default:''"`
 	UTMifyToken       string    `gorm:"column:utmify_token;not null;default:''"`
 	DracofyToken      string    `gorm:"not null;default:''"`
+	ClarityProjectID  string    `gorm:"column:clarity_project_id;not null;default:''"`
 	CustomHeadScript  string    `gorm:"not null;default:''"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
@@ -36,6 +37,7 @@ func (m UserTrackingConfig) ToDomain() *domain.UserTrackingConfig {
 		GTMContainerID:    m.GTMContainerID,
 		UTMifyToken:       m.UTMifyToken,
 		DracofyToken:      m.DracofyToken,
+		ClarityProjectID:  m.ClarityProjectID,
 		CustomHeadScript:  m.CustomHeadScript,
 		CreatedAt:         m.CreatedAt,
 		UpdatedAt:         m.UpdatedAt,
@@ -52,6 +54,7 @@ func TrackingConfigFromDomain(c *domain.UserTrackingConfig) UserTrackingConfig {
 		GTMContainerID:    c.GTMContainerID,
 		UTMifyToken:       c.UTMifyToken,
 		DracofyToken:      c.DracofyToken,
+		ClarityProjectID:  c.ClarityProjectID,
 		CustomHeadScript:  c.CustomHeadScript,
 		CreatedAt:         c.CreatedAt,
 		UpdatedAt:         c.UpdatedAt,

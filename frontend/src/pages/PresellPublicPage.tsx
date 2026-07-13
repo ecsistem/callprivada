@@ -331,8 +331,8 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
 
   return (
     <div
-      style={{ ...bgStyle, minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}
-      className="relative"
+      style={{ ...bgStyle, fontFamily: 'system-ui, -apple-system, sans-serif' }}
+      className="relative min-h-screen-safe"
     >
       {config.bg_image_url && (
         <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }} />
@@ -389,7 +389,7 @@ export default function PresellPublicPage({ isDownsell = false, isUpsell = false
         </div>
       )}
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-5 py-12">
+      <div className="relative z-10 min-h-screen-safe flex flex-col items-center justify-center px-5 py-12">
         <div className="w-full max-w-sm flex flex-col items-center">
 
           {/* Viewer count social proof */}

@@ -30,7 +30,8 @@ func (r *trackingRepository) Upsert(ctx context.Context, cfg *domain.UserTrackin
 			Columns: []clause.Column{{Name: "user_id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
 				"facebook_pixel_id", "tiktok_pixel_id", "google_analytics_id",
-				"gtm_container_id", "utmify_token", "dracofy_token", "custom_head_script", "updated_at",
+				"gtm_container_id", "utmify_token", "dracofy_token", "clarity_project_id",
+				"custom_head_script", "updated_at",
 			}),
 		}).
 		Create(&m).Error

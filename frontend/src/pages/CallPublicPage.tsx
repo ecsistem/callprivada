@@ -986,14 +986,17 @@ export default function CallPublicPage() {
       <video
         ref={videoRef}
         src={call.video_url}
+        poster={call.contact_photo_url || undefined}
         className="absolute inset-0 w-full h-full"
         autoPlay
         playsInline
+        preload="auto"
         muted={false}
         disablePictureInPicture
         controlsList="nodownload nofullscreen noremoteplayback"
         onContextMenu={(e) => e.preventDefault()}
         onCanPlay={() => setVideoLoading(false)}
+        onLoadedData={() => setVideoLoading(false)}
         style={{
           pointerEvents: 'none',
           objectFit: 'cover',

@@ -9,6 +9,7 @@ const EMPTY: TrackingConfig = {
   gtm_container_id: '',
   utmify_token: '',
   dracofy_token: '',
+  clarity_project_id: '',
   custom_head_script: '',
 };
 
@@ -156,6 +157,27 @@ export default function TrackingSettingsPage() {
             onChange={(e) => set('dracofy_token', e.target.value)}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-emerald-500"
           />
+        </div>
+
+        {/* Microsoft Clarity */}
+        <div className="bg-gray-900 rounded-xl p-5 border border-gray-800">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white font-bold text-xs">C</div>
+            <div>
+              <p className="text-white font-medium">Microsoft Clarity</p>
+              <p className="text-gray-500 text-xs">Mapas de calor e gravações de sessão — carrega em todas as páginas</p>
+            </div>
+          </div>
+          <input
+            type="text"
+            placeholder="ID do projeto (ex: xli006a3td)"
+            value={current.clarity_project_id}
+            onChange={(e) => set('clarity_project_id', e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+          />
+          <p className="text-gray-600 text-xs mt-2">
+            Cole apenas o ID do projeto (a parte final do script, ex: <span className="text-gray-400 font-mono">xli006a3td</span>).
+          </p>
         </div>
 
         {/* Custom Script */}
