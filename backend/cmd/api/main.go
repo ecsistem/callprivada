@@ -112,9 +112,17 @@ func main() {
 	hub := ws.NewHub()
 	go hub.Run()
 
-	abacateClient := abacatepay.NewClient(cfg.AbacatePayAPIKey, cfg.AbacatePayBaseURL)
-	subService := services.NewSubscriptionService(planRepo, subRepo, userRepo, abacateClient)
 	settingsService := services.NewSettingsService(settingsRepo)
+	// A API key do AbacatePay é resolvida em runtime: usa a configurada no
+	// painel admin (app_settings) e cai no env var quando vazia.
+	abacateKeyFn := func() string {
+		if k := settingsService.AbacatePayAPIKey(context.Background()); k != "" {
+			return k
+		}
+		return cfg.AbacatePayAPIKey
+	}
+	abacateClient := abacatepay.NewClientWithKeyFunc(abacateKeyFn, cfg.AbacatePayBaseURL)
+	subService := services.NewSubscriptionService(planRepo, subRepo, userRepo, abacateClient)
 	videoService := services.NewVideoService(videoRepo, fileStore)
 	callService := services.NewCallService(callRepo, videoRepo, callEventRepo, fileStore, paymentConfigRepo, settingsService)
 	callEventService := services.NewCallEventService(callEventRepo, callRepo)
@@ -146,7 +154,7 @@ func main() {
 	adminHandler := handlers.NewAdminHandler(adminService, jwtService)
 	presellHandler := handlers.NewPresellHandler(presellService, trackingService, subService)
 	trackingHandler := handlers.NewTrackingHandler(trackingService)
-	settingsHandler := handlers.NewSettingsHandler(settingsService, fileStore)
+	settingsHandler := handlers.NewSettingsHandler(settingsService, fileStore, abacateClient)
 
 	r := gin.Default()
 	r.Use(middlewares.SecurityHeaders())
@@ -296,6 +304,7 @@ func main() {
 	adminGroup.PUT("/plans/:id/limits", subHandler.UpdatePlanLimits)
 	adminGroup.GET("/settings", settingsHandler.Get)
 	adminGroup.PUT("/settings", settingsHandler.Update)
+	adminGroup.POST("/settings/abacatepay/test", settingsHandler.TestAbacatePay)
 	adminGroup.DELETE("/plans/:id", subHandler.DeletePlan)
 
 	// Webhooks (sem JWT).

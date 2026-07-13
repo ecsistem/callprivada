@@ -23,6 +23,10 @@ type SettingsService struct {
 	cdnCache      string
 	cdnCachedAt   time.Time
 	cdnCacheValid bool
+
+	abacateCache      string
+	abacateCachedAt   time.Time
+	abacateCacheValid bool
 }
 
 const cdnCacheTTL = 30 * time.Second
@@ -78,6 +82,54 @@ func (s *SettingsService) SetVideoCDNURL(ctx context.Context, raw string) (strin
 // CDN configurado (mantendo o path). Se não houver CDN, retorna a URL original.
 func (s *SettingsService) ApplyVideoCDN(ctx context.Context, storageURL string) string {
 	return rewriteToCDN(storageURL, s.VideoCDNURL(ctx))
+}
+
+// AbacatePayAPIKey retorna a chave configurada no painel (com cache de 30s).
+// Vazia quando não configurada — o chamador deve aplicar o fallback do env.
+func (s *SettingsService) AbacatePayAPIKey(ctx context.Context) string {
+	s.mu.RLock()
+	if s.abacateCacheValid && time.Since(s.abacateCachedAt) < cdnCacheTTL {
+		v := s.abacateCache
+		s.mu.RUnlock()
+		return v
+	}
+	s.mu.RUnlock()
+
+	v, err := s.repo.Get(ctx, domain.SettingAbacatePayAPIKey)
+	if err != nil {
+		return ""
+	}
+	s.mu.Lock()
+	s.abacateCache = v
+	s.abacateCachedAt = time.Now()
+	s.abacateCacheValid = true
+	s.mu.Unlock()
+	return v
+}
+
+// SetAbacatePayAPIKey grava a chave do AbacatePay (vazio = limpar/usar env).
+func (s *SettingsService) SetAbacatePayAPIKey(ctx context.Context, key string) error {
+	key = strings.TrimSpace(key)
+	if err := s.repo.Set(ctx, domain.SettingAbacatePayAPIKey, key); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.abacateCache = key
+	s.abacateCachedAt = time.Now()
+	s.abacateCacheValid = true
+	s.mu.Unlock()
+	return nil
+}
+
+// MaskSecret devolve uma versão mascarada de um segredo (últimos 4 chars).
+func MaskSecret(v string) string {
+	if v == "" {
+		return ""
+	}
+	if len(v) <= 4 {
+		return "••••"
+	}
+	return "••••••" + v[len(v)-4:]
 }
 
 // normalizeCDNBase valida e normaliza a base da CDN: garante esquema (https por

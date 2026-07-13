@@ -111,6 +111,8 @@ export async function changeUserPassword(id: string, password: string): Promise<
 export interface AppSettings {
   video_cdn_url: string;
   video_cdn_default: string;
+  abacatepay_configured: boolean;
+  abacatepay_key_masked: string;
 }
 
 export async function getAppSettings(): Promise<AppSettings> {
@@ -118,7 +120,12 @@ export async function getAppSettings(): Promise<AppSettings> {
   return res.data.data;
 }
 
-export async function updateAppSettings(patch: { video_cdn_url?: string }): Promise<AppSettings> {
+export async function updateAppSettings(patch: { video_cdn_url?: string; abacatepay_api_key?: string }): Promise<AppSettings> {
   const res = await api.put('/admin/settings', patch);
+  return res.data.data;
+}
+
+export async function testAbacatePay(): Promise<{ ok: boolean; message: string }> {
+  const res = await api.post('/admin/settings/abacatepay/test');
   return res.data.data;
 }

@@ -13,13 +13,19 @@ import (
 	"github.com/callprivada/fwlc-backend/internal/storage"
 )
 
+// AbacatePayPinger valida a credencial atual do AbacatePay.
+type AbacatePayPinger interface {
+	Ping() error
+}
+
 type SettingsHandler struct {
 	settings *services.SettingsService
 	storage  storage.FileStorage
+	abacate  AbacatePayPinger
 }
 
-func NewSettingsHandler(settings *services.SettingsService, store storage.FileStorage) *SettingsHandler {
-	return &SettingsHandler{settings: settings, storage: store}
+func NewSettingsHandler(settings *services.SettingsService, store storage.FileStorage, abacate AbacatePayPinger) *SettingsHandler {
+	return &SettingsHandler{settings: settings, storage: store, abacate: abacate}
 }
 
 // defaultVideoHost deriva o host padrão do storage (ex: https://storage.exemplo.com)
@@ -40,14 +46,18 @@ func (h *SettingsHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
+	abacateKey := all[domain.SettingAbacatePayAPIKey]
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{
-		"video_cdn_url":     all[domain.SettingVideoCDNURL],
-		"video_cdn_default": h.defaultVideoHost(),
+		"video_cdn_url":         all[domain.SettingVideoCDNURL],
+		"video_cdn_default":     h.defaultVideoHost(),
+		"abacatepay_configured": abacateKey != "",
+		"abacatepay_key_masked": services.MaskSecret(abacateKey),
 	}})
 }
 
 type updateSettingsRequest struct {
-	VideoCDNURL *string `json:"video_cdn_url"`
+	VideoCDNURL     *string `json:"video_cdn_url"`
+	AbacatePayAPIKey *string `json:"abacatepay_api_key"`
 }
 
 // Update — PUT /admin/settings (admin). Atualiza as configurações enviadas.
@@ -69,5 +79,30 @@ func (h *SettingsHandler) Update(c *gin.Context) {
 		}
 	}
 
+	if req.AbacatePayAPIKey != nil {
+		// Ignora o valor mascarado (••••) para não sobrescrever com o placeholder.
+		v := strings.TrimSpace(*req.AbacatePayAPIKey)
+		if !strings.Contains(v, "•") {
+			if err := h.settings.SetAbacatePayAPIKey(c.Request.Context(), v); err != nil {
+				respondError(c, err)
+				return
+			}
+		}
+	}
+
 	h.Get(c)
+}
+
+// TestAbacatePay — POST /admin/settings/abacatepay/test. Valida a credencial
+// atual (do painel, com fallback do env) contra a API do AbacatePay.
+func (h *SettingsHandler) TestAbacatePay(c *gin.Context) {
+	if h.abacate == nil {
+		c.JSON(http.StatusOK, gin.H{"data": gin.H{"ok": false, "message": "integração indisponível"}})
+		return
+	}
+	if err := h.abacate.Ping(); err != nil {
+		c.JSON(http.StatusOK, gin.H{"data": gin.H{"ok": false, "message": err.Error()}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": gin.H{"ok": true, "message": "Conexão com o AbacatePay OK"}})
 }

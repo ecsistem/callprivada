@@ -352,3 +352,10 @@ Regras:
 - [x] Causa: FK `subscriptions.plan_id` sem ON DELETE → hard-delete de plano com assinaturas dava 500 genérico (frontend não mostrava erro).
 - [x] Backend: `SubscriptionRepository.CountByPlan`; `DeletePlan` bloqueia com `ErrPlanInUse` (409 "desative em vez de excluir") quando há assinaturas; hard-delete só quando 0 assinantes.
 - [x] Frontend (PlansTab): mostra a mensagem de erro inline + botão "Desativar plano em vez disso" (usa updatePlan active=false).
+
+## AbacatePay: credencial configurável no admin + teste (2026-07-13)
+- [x] Teste da chave `key_RqrxsALS5aheFCtkpXK0J4qK` contra a API real → 401 "Invalid or inactive API key" (chave inválida/inativa).
+- [x] `abacatepay.Client` usa key dinâmica (`NewClientWithKeyFunc`) + método `Ping()`.
+- [x] Setting `abacatepay_api_key` (app_settings); `SettingsService.AbacatePayAPIKey`/`SetAbacatePayAPIKey` + `MaskSecret`; key resolvida em runtime (painel → fallback env).
+- [x] `SettingsHandler`: GET expõe `abacatepay_configured` + `abacatepay_key_masked`; PUT aceita `abacatepay_api_key` (ignora valor mascarado); `POST /admin/settings/abacatepay/test` (Ping).
+- [x] Admin → Configurações: card AbacatePay com input password, salvar, "Testar conexão" e limpar.

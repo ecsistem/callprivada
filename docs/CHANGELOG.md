@@ -3,6 +3,21 @@
 Todo entrega de funcionalidade deve ser registrada aqui: o que foi criado,
 arquivos alterados/novos, e problemas encontrados.
 
+## [2026-07-13d] — AbacatePay: credencial no painel admin + teste de conexão
+
+### Backend
+- `abacatepay/client.go` — key resolvida em runtime via `NewClientWithKeyFunc(keyFn)`; novo `Ping()` valida a credencial (GET /v1/billing/list).
+- `cmd/api/main.go` — client construído com provider: usa a chave do painel (app_settings) e cai no env `ABACATEPAY_API_KEY` quando vazia.
+- `domain/app_setting.go` + `services/settings_service.go` — setting `abacatepay_api_key` (cache 30s), `SetAbacatePayAPIKey`, helper `MaskSecret`.
+- `handlers/settings_handler.go` — GET retorna `abacatepay_configured` + `abacatepay_key_masked`; PUT aceita `abacatepay_api_key` (ignora placeholder mascarado); `POST /admin/settings/abacatepay/test`.
+
+### Frontend
+- `services/adminService.ts` — `AppSettings` com campos do AbacatePay; `updateAppSettings` aceita `abacatepay_api_key`; `testAbacatePay()`.
+- `pages/AdminPage.tsx` (aba Configurações) — card AbacatePay: input password, "Salvar chave", "Testar conexão" (mostra ok/erro) e "Limpar".
+
+### Nota
+- A credencial de teste fornecida (`key_Rqrx…`) retornou **401 Invalid or inactive API key** na API do AbacatePay — inválida/inativa, precisa de uma chave ativa.
+
 ## [2026-07-13c] — Fix: excluir plano com assinaturas dava erro silencioso
 
 ### Backend

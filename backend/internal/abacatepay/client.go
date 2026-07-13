@@ -12,20 +12,35 @@ import (
 const defaultBaseURL = "https://api.abacatepay.com"
 
 type Client struct {
-	apiKey  string
+	keyFn   func() string
 	baseURL string
 	http    *http.Client
 }
 
 func NewClient(apiKey, baseURL string) *Client {
+	return NewClientWithKeyFunc(func() string { return apiKey }, baseURL)
+}
+
+// NewClientWithKeyFunc resolve a API key dinamicamente a cada requisição —
+// permite trocar a credencial em runtime (ex: configurada no painel admin).
+func NewClientWithKeyFunc(keyFn func() string, baseURL string) *Client {
 	if baseURL == "" {
 		baseURL = defaultBaseURL
 	}
 	return &Client{
-		apiKey:  apiKey,
+		keyFn:   keyFn,
 		baseURL: baseURL,
 		http:    &http.Client{Timeout: 15 * time.Second},
 	}
+}
+
+// Ping valida a credencial atual contra a API do AbacatePay (endpoint de
+// leitura). Retorna erro se a chave estiver ausente, inválida ou inativa.
+func (c *Client) Ping() error {
+	if c.keyFn() == "" {
+		return fmt.Errorf("abacatepay: nenhuma API key configurada")
+	}
+	return c.do("GET", "/v1/billing/list", nil, nil)
 }
 
 func (c *Client) do(method, path string, body interface{}, out interface{}) error {
@@ -42,7 +57,7 @@ func (c *Client) do(method, path string, body interface{}, out interface{}) erro
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
+	req.Header.Set("Authorization", "Bearer "+c.keyFn())
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.http.Do(req)

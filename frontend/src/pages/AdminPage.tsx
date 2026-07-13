@@ -5,7 +5,7 @@ import {
   listAuditLogs, blockUser, unblockUser, deleteAdminUser,
   cancelAdminSubscription, deleteAdminCall, deleteAdminPlan,
   impersonateUser, changeUserPassword,
-  getAppSettings, updateAppSettings,
+  getAppSettings, updateAppSettings, testAbacatePay,
 } from '../services/adminService';
 import { useAuthStore } from '../stores/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -665,10 +665,30 @@ function SettingsTab() {
     },
   });
 
+  const [abacateKey, setAbacateKey] = useState('');
+  const [abacateSaved, setAbacateSaved] = useState(false);
+  const abacateMutation = useMutation({
+    mutationFn: (key: string) => updateAppSettings({ abacatepay_api_key: key }),
+    onSuccess: (res) => {
+      qc.setQueryData(['admin-settings'], res);
+      setAbacateKey('');
+      setAbacateSaved(true);
+      setTimeout(() => setAbacateSaved(false), 2500);
+    },
+  });
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const testMutation = useMutation({
+    mutationFn: testAbacatePay,
+    onMutate: () => setTestResult(null),
+    onSuccess: (r) => setTestResult(r),
+    onError: () => setTestResult({ ok: false, message: 'Falha ao testar a conexão.' }),
+  });
+
   if (isLoading) return <div className="h-40 bg-white/5 rounded-xl animate-pulse" />;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-8">
+      <div className="space-y-6">
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-[#FE015C]/10 flex items-center justify-center shrink-0">
           <Server size={17} className="text-[#FE015C]" />
@@ -716,6 +736,80 @@ function SettingsTab() {
         )}
         {saved && <span className="text-xs text-green-400 flex items-center gap-1"><Check size={13} />Salvo</span>}
         {mutation.isError && <span className="text-xs text-red-400 flex items-center gap-1"><AlertCircle size={13} />Domínio inválido</span>}
+      </div>
+      </div>
+
+      {/* ── AbacatePay ── */}
+      <div className="space-y-6 border-t border-white/5 pt-8">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+            <CreditCard size={17} className="text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-white font-semibold text-sm">AbacatePay (gateway de assinaturas)</p>
+            <p className="text-gray-500 text-xs mt-0.5 leading-relaxed">
+              Credencial usada para cobrar as assinaturas dos seus usuários. Deixe vazio para usar
+              a variável de ambiente. A chave nunca é exibida por completo.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium text-gray-400">API Key</label>
+          <input
+            type="password"
+            value={abacateKey}
+            onChange={(e) => { setAbacateKey(e.target.value); setTestResult(null); }}
+            placeholder={data?.abacatepay_configured ? `Configurada: ${data.abacatepay_key_masked}` : 'key_...'}
+            autoComplete="off"
+            className={inputCls + ' w-full font-mono'}
+          />
+          <p className="text-xs text-gray-600">
+            {data?.abacatepay_configured
+              ? <>Uma chave já está salva ({data.abacatepay_key_masked}). Digite uma nova para substituir.</>
+              : <>Nenhuma chave salva no painel — usando a do ambiente (se houver).</>}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => abacateMutation.mutate(abacateKey.trim())}
+            disabled={abacateMutation.isPending || !abacateKey.trim()}
+            className="bg-[#FE015C] hover:bg-[#FD267D] disabled:opacity-40 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all"
+          >
+            {abacateMutation.isPending ? 'Salvando…' : 'Salvar chave'}
+          </button>
+          <button
+            onClick={() => testMutation.mutate()}
+            disabled={testMutation.isPending}
+            className="bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 font-medium px-4 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2 disabled:opacity-50"
+          >
+            {testMutation.isPending
+              ? <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Testando…</>
+              : 'Testar conexão'}
+          </button>
+          {data?.abacatepay_configured && (
+            <button
+              onClick={() => { setAbacateKey(''); abacateMutation.mutate(''); }}
+              disabled={abacateMutation.isPending}
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Limpar (usar ambiente)
+            </button>
+          )}
+          {abacateSaved && <span className="text-xs text-green-400 flex items-center gap-1"><Check size={13} />Salvo</span>}
+        </div>
+
+        {testResult && (
+          <div className={`flex items-start gap-2.5 text-xs rounded-lg px-3 py-2.5 border ${
+            testResult.ok
+              ? 'text-green-400 bg-green-500/10 border-green-500/20'
+              : 'text-red-400 bg-red-500/10 border-red-500/20'
+          }`}>
+            {testResult.ok ? <Check size={14} className="mt-0.5 shrink-0" /> : <AlertCircle size={14} className="mt-0.5 shrink-0" />}
+            <span className="break-all">{testResult.message}</span>
+          </div>
+        )}
       </div>
     </div>
   );
