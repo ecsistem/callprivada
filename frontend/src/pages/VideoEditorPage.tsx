@@ -1275,7 +1275,7 @@ export default function VideoEditorPage() {
       setLocalEvents(prev => [...prev, created]);
       setSelectedId(created.id);
       qc.invalidateQueries({ queryKey: ['events', id] });
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const removeEvent = async (eventId: string) => {
@@ -1284,7 +1284,7 @@ export default function VideoEditorPage() {
       setLocalEvents(prev => prev.filter(e => e.id !== eventId));
       if (selectedId === eventId) setSelectedId(null);
       qc.invalidateQueries({ queryKey: ['events', id] });
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const updateLocalEvent = useCallback((field: string, val: string | number | Record<string, string>) => {

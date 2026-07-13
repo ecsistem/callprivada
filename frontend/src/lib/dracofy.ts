@@ -10,11 +10,11 @@ declare global {
 export function dracofyPageview(pathname: string) {
   try {
     window.DTrack?.pageview(pathname);
-  } catch {}
+  } catch { /* ignore */ }
 }
 
 export function dracofyEvent(name: string, props?: Record<string, unknown>) {
   try {
     window.DTrack?.event(name, props);
-  } catch {}
+  } catch { /* ignore */ }
 }

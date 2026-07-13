@@ -314,13 +314,13 @@ export default function CreditsOverlay({
   if (mode === 'payer') {
     const fieldCls = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-[#FE015C]/50 transition-all";
     const canProceed = payerName.trim() && payerEmail.trim() && payerPhone.trim() && payerDocument.trim();
-    function payerValidationMsg(): string {
+    const payerValidationMsg = (): string => {
       if (!payerName.trim()) return 'Preencha o nome completo.';
       if (!/^\S+@\S+\.\S+$/.test(payerEmail.trim())) return 'Preencha um e-mail válido.';
       if (!payerPhone.trim() || payerPhone.replace(/\D/g, '').length < 9) return 'Preencha um telemóvel válido (com indicativo do país).';
       if (!payerDocument.trim()) return 'Preencha o NIF.';
       return '';
-    }
+    };
     return (
       <FullscreenPanel>
         <div className="text-center mb-5">
